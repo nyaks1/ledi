@@ -2,8 +2,7 @@
 
 An AI agent for Software Quality Engineering (API testing, money-moving APIs).
 
-> Status: work in progress for the Sebaka AI Agent Challenge. The fake bank
-> below is built; the test agent is next.
+> Status: **Complete** — fake bank, planner, runner, and reporter all working.
 
 ## Problem
 
@@ -37,27 +36,105 @@ An agent that:
 
 ```
 bank/app.py      fake bank with switchable planted bugs
-agent/           planner (LLM), runner (deterministic), report  [next]
+agent/
+  planner.py     Gemini: OpenAPI spec → invariants + test cases (JSON)
+  runner.py      plain Python: fires cases, checks the ledger
+  report.py      hit-rate table: bugs planted vs caught, false alarms
 results/         hit-rate table: bugs planted vs caught, false alarms
 try.py           manual proof of the double-charge bug
 ```
 
-## Run the fake bank
+## Quickstart
 
-```
-python -m venv .venv
-.venv\Scripts\activate        # Windows
+```bash
+# 1. Set up environment
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 
-set BUGS=double_charge        # Windows (bug ON)
-uvicorn bank.app:app --reload
+# 2. Copy .env.example to .env and add your Gemini API key
+cp .env.example .env
+# edit .env with your GEMINI_API_KEY
+
+# 3. Generate OpenAPI spec from the bank
+python -c "import bank.app; import json; print(json.dumps(bank.app.app.openapi(), indent=2))" > bank/openapi.json
+
+# 4. Generate test plan (optional - pre-generated plan exists)
+python agent/planner.py
+
+# 5. Start the bank (correct behavior)
+uvicorn bank.app:app --host 127.0.0.1 --port 8000
+
+# 6. Run the test suite
+python agent/runner.py
+
+# 7. Generate report
+python agent/report.py
+cat results/hit_rate.md
 ```
 
-On Linux/macOS use `BUGS=double_charge uvicorn bank.app:app --reload`.
-Leave `BUGS` unset for the correct behaviour.
+## Testing the Bug
 
-Then `python try.py`: with the bug on, account A drops by R1000 and the ledger
-has 2 rows. With it off, A drops by R500 and the ledger has 1 row.
+```bash
+# Stop bank (Ctrl+C), then restart with bug enabled
+BUGS=double_charge uvicorn bank.app:app --host 127.0.0.1 --port 8000
+
+# In another terminal, run tests again
+python agent/runner.py
+python agent/report.py
+cat results/hit_rate.md
+```
+
+### Expected Results
+
+| Bug State | tc-002 (Retry) | tc-007 (Concurrent) | Verdict |
+|-----------|----------------|---------------------|---------|
+| **OFF** (correct) | ✅ PASS | ✅ PASS | ⏸️ SKIPPED (no bugs planted) |
+| **ON** (double_charge) | ❌ FAIL 🐛 | ❌ FAIL 🐛 | 🟢 EXCELLENT (bug caught) |
+
+## Manual Proof (try.py)
+
+```bash
+# With bug ON
+BUGS=double_charge uvicorn bank.app:app --reload
+python try.py
+# Account A drops by R1000, ledger has 2 rows
+
+# With bug OFF
+uvicorn bank.app:app --reload
+python try.py
+# Account A drops by R500, ledger has 1 row
+```
+
+## Components
+
+### Bank (`bank/app.py`)
+- FastAPI server with in-memory accounts & ledger
+- `/transfer` endpoint with idempotency key header
+- Test-only endpoints: `/accounts/{acc}`, `/ledger`, `/_test/reset`
+- Plantable bugs via `BUGS` env var (currently: `double_charge`)
+
+### Planner (`agent/planner.py`)
+- Loads OpenAPI spec from `bank/openapi.json`
+- Uses Gemini to generate `agent/test_plan.json` with:
+  - Money-moving endpoints
+  - Invariants (idempotency, ledger consistency, no PII)
+  - Test cases (happy path, retry, error cases, edge cases)
+
+### Runner (`agent/runner.py`)
+- Deterministic executor — no LLM calls
+- Resets bank before each test case for isolation
+- Fires requests, snapshots balances & ledger before/after
+- Verifies invariants by reading truth endpoints, not trusting HTTP status
+
+### Report (`agent/report.py`)
+- Reads `results/run_results.json`
+- Generates `results/hit_rate.md` with:
+  - Bug detection matrix (planted vs caught)
+  - Per-test results
+  - Detailed findings for failures
+  - False alarm analysis
+  - Overall verdict
 
 ## POPIA
 

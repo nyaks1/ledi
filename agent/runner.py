@@ -167,8 +167,10 @@ def check_invariant_pii_001(
     """No PII: no full account numbers in responses."""
     details = []
     passed = True
-    # Known account numbers in this system
-    known_accounts = {"A", "B", "Z"}  # Z is used in test cases
+    # Known synthetic account numbers (10-digit strings)
+    synthetic_accounts = {"1234567890", "0987654321"}
+    # Also check for short account IDs inappropriately exposed
+    short_accounts = {"A", "B", "Z"}
     
     for i, resp in enumerate(responses):
         body = resp.text
@@ -177,15 +179,17 @@ def check_invariant_pii_001(
         # Check error responses for leaked account numbers
         if "detail" in data:
             detail = str(data["detail"])
-            # Check if detail contains full account identifiers
-            # In a real system these would be long account numbers
-            # Here we check for the pattern of exposing internal account IDs
-            for acc in known_accounts:
-                if acc in detail and detail != "unknown account" and detail != "invalid amount":
-                    # The error message contains account info beyond just "unknown account"
+            # Check for synthetic full account numbers (10+ digit strings)
+            for acc in synthetic_accounts:
+                if acc in detail:
+                    passed = False
+                    details.append(f"  Response {i}: PII LEAK in error - '{detail}' (contains synthetic account {acc})")
+            # Check for short account IDs exposed beyond generic messages
+            for acc in short_accounts:
+                if acc in detail and detail not in ("unknown account", "invalid amount"):
                     if len(detail) > 20:  # More than generic message
                         passed = False
-                        details.append(f"  Response {i}: PII LEAK in error - '{detail}'")
+                        details.append(f"  Response {i}: PII LEAK in error - '{detail}' (contains account {acc})")
         
         # Check success responses for unexpected fields
         if "status" in data:

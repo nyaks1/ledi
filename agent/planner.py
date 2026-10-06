@@ -30,18 +30,14 @@ def generate_test_plan(openapi_spec: dict[str, Any]) -> dict[str, Any]:
     """
     Send OpenAPI spec to Gemini and get back:
     - money_moving_endpoints: list of endpoints that transfer value
-    - invariants: rules that must always hold
-    - test_cases: concrete test scenarios to execute
+    - invariants: rules that must always hold (fixed set)
+    - test_cases: concrete test scenarios derived from the spec
     """
     prompt = f"""
 You are a security-focused API test planner for a payment system.
-Analyze this OpenAPI spec and identify:
+Analyze this OpenAPI spec and derive test cases that target the three invariants below.
 
-1. MONEY-MOVING ENDPOINTS: Which endpoints actually transfer value between accounts?
-2. INVARIANTS: Rules that must ALWAYS hold for correctness (see examples below).
-3. TEST CASES: Concrete scenarios to fire against the API to find bugs.
-
-Return ONLY valid JSON with this exact structure:
+Return ONLY valid JSON with this exact structure (no markdown, no explanation):
 {{
   "money_moving_endpoints": [
     {{"method": "POST", "path": "/transfer", "description": "Transfers cents between accounts"}}
@@ -67,78 +63,19 @@ Return ONLY valid JSON with this exact structure:
     }}
   ],
   "test_cases": [
-    {{
-      "id": "tc-001",
-      "name": "Happy path transfer",
-      "endpoint": "/transfer",
-      "method": "POST",
-      "payload": {{"from_acc": "A", "to_acc": "B", "amount": 50000}},
-      "headers": {{"Idempotency-Key": "idem-happy-001"}},
-      "expected_status": 200,
-      "invariants_to_check": ["ledger-001", "pii-001"]
-    }},
-    {{
-      "id": "tc-002",
-      "name": "Retry with same idempotency key",
-      "endpoint": "/transfer",
-      "method": "POST",
-      "payload": {{"from_acc": "A", "to_acc": "B", "amount": 50000}},
-      "headers": {{"Idempotency-Key": "idem-retry-001"}},
-      "repeat": 2,
-      "expected_status": 200,
-      "invariants_to_check": ["idem-001", "ledger-001"]
-    }},
-    {{
-      "id": "tc-003",
-      "name": "Insufficient funds",
-      "endpoint": "/transfer",
-      "method": "POST",
-      "payload": {{"from_acc": "B", "to_acc": "A", "amount": 60000}},
-      "headers": {{"Idempotency-Key": "idem-insufficient-001"}},
-      "expected_status": 400,
-      "invariants_to_check": ["ledger-001"]
-    }},
-    {{
-      "id": "tc-004",
-      "name": "Unknown account",
-      "endpoint": "/transfer",
-      "method": "POST",
-      "payload": {{"from_acc": "Z", "to_acc": "B", "amount": 1000}},
-      "headers": {{"Idempotency-Key": "idem-unknown-001"}},
-      "expected_status": 404,
-      "invariants_to_check": ["ledger-001"]
-    }},
-    {{
-      "id": "tc-005",
-      "name": "Zero amount",
-      "endpoint": "/transfer",
-      "method": "POST",
-      "payload": {{"from_acc": "A", "to_acc": "B", "amount": 0}},
-      "headers": {{"Idempotency-Key": "idem-zero-001"}},
-      "expected_status": 400,
-      "invariants_to_check": ["ledger-001"]
-    }},
-    {{
-      "id": "tc-006",
-      "name": "Negative amount",
-      "endpoint": "/transfer",
-      "method": "POST",
-      "payload": {{"from_acc": "A", "to_acc": "B", "amount": -100}},
-      "headers": {{"Idempotency-Key": "idem-negative-001"}},
-      "expected_status": 400,
-      "invariants_to_check": ["ledger-001"]
-    }},
-    {{
-      "id": "tc-007",
-      "name": "Concurrent transfers same account",
-      "endpoint": "/transfer",
-      "method": "POST",
-      "payload": {{"from_acc": "A", "to_acc": "B", "amount": 30000}},
-      "headers": {{"Idempotency-Key": "idem-concurrent-001"}},
-      "repeat": 3,
-      "expected_status": 200,
-      "invariants_to_check": ["idem-001", "ledger-001"]
-    }}
+    // Derive cases from the spec. Required coverage:
+    // 1. Happy path (valid transfer, checks ledger-001, pii-001)
+    // 2. Idempotency retry (same key, repeat=2, checks idem-001, ledger-001)
+    // 3. Boundary: amount == sender balance (exact drain)
+    // 4. Boundary: amount == sender balance + 1 (insufficient funds)
+    // 5. Self-transfer (from_acc == to_acc)
+    // 6. Missing idempotency key header
+    // 7. Huge integer amount (overflow/edge)
+    // 8. Concurrent requests (concurrent=true, repeat=3, checks idem-001, ledger-001)
+    // 9. Invalid amount: zero, negative
+    // 10. Unknown account
+    // Each case needs: id, name, endpoint, method, payload, headers, expected_status, invariants_to_check
+    // Use "concurrent": true for parallel execution, "repeat" for sequential retries
   ]
 }}
 
@@ -147,10 +84,12 @@ OpenAPI Spec:
 
 RULES:
 - Only return the JSON object, no markdown, no explanation
-- The test_cases should cover: happy path, idempotency retry, error cases, edge cases
-- Each test_case must reference invariants_to_check by ID
-- For idempotency tests, use "repeat": 2 (or more) to indicate retry
 - Amounts are in cents (integers)
+- Accounts in spec: A (100000 cents), B (50000 cents)
+- Idempotency-Key header is required per spec
+- For concurrent tests, use "concurrent": true and "repeat": N
+- For sequential retries, use "repeat": N without "concurrent"
+- Each test_case MUST reference invariants_to_check by ID from the three invariants above
 """
 
     response = MODEL.generate_content(prompt)

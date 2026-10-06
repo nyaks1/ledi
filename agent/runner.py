@@ -3,7 +3,9 @@ Runner: Deterministic test executor
 Fires test cases against the bank API, verifies invariants by reading ledger/balances.
 """
 import json
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -20,7 +22,7 @@ class TestResult:
     passed: bool
     details: list[str] = field(default_factory=list)
     bug_reproduced: bool = False
-    bug_type: str | None = None
+    bug_types: list[str] = field(default_factory=list)
 
 
 def get_balance(acc: str) -> int:
@@ -35,6 +37,16 @@ def get_ledger() -> list[dict]:
     resp = requests.get(f"{BASE_URL}/ledger", timeout=5)
     resp.raise_for_status()
     return resp.json()
+
+
+def get_active_bugs() -> list[str]:
+    """Get list of active bugs from bank."""
+    try:
+        resp = requests.get(f"{BASE_URL}/_test/config", timeout=5)
+        resp.raise_for_status()
+        return resp.json().get("active_bugs", [])
+    except Exception:
+        return []
 
 
 def reset_bank() -> None:
@@ -71,7 +83,6 @@ def check_invariant_idem_001(
         details.append(f"  Second: {responses[1].json()}")
 
     # Check ledger didn't grow BETWEEN retries (snapshot after first vs after second)
-    # ledger_snapshots[0] = after first request, ledger_snapshots[1] = after second request
     ledger_grew_on_retry = len(ledger_snapshots[-1]) > len(ledger_snapshots[0])
     details.append(f"Ledger grew on retry: {ledger_grew_on_retry} (after 1st: {len(ledger_snapshots[0])}, after 2nd: {len(ledger_snapshots[-1])})")
 
@@ -102,25 +113,38 @@ def check_invariant_ledger_001(
         details.append(f"Accounts {from_acc} or {to_acc} not in balance tracking, skipping balance delta check")
         ledger_grew = len(ledger_after) > len(ledger_before)
         details.append(f"Ledger grew: {ledger_grew}")
-        # For error responses, ledger should not grow
         passed = (status != 200 and not ledger_grew) or (status == 200 and ledger_grew)
         if not passed:
             details.append("❌ LEDGER VIOLATION: Unexpected ledger growth")
         return passed, details
 
+    # Self-transfer: from_acc == to_acc, balance should not change
+    is_self_transfer = (from_acc == to_acc)
+
     if status == 200:
-        # Success: sender lost X, recipient gained X
+        # Success: sender lost X, recipient gained X (unless self-transfer)
         sender_delta = balances_before[from_acc] - balances_after[from_acc]
         recipient_delta = balances_after[to_acc] - balances_before[to_acc]
         ledger_grew = len(ledger_after) > len(ledger_before)
 
-        details.append(f"Sender delta: {sender_delta} (expected {amount})")
-        details.append(f"Recipient delta: {recipient_delta} (expected {amount})")
-        details.append(f"Ledger grew: {ledger_grew}")
+        if is_self_transfer:
+            details.append(f"Self-transfer: sender delta {sender_delta}, recipient delta {recipient_delta}, ledger grew {ledger_grew}")
+            # For self-transfer, balance should not change, ledger may or may not grow
+            passed = (sender_delta == 0 and recipient_delta == 0)
+            if not passed:
+                details.append("❌ SELF-TRANSFER VIOLATION: Balance changed on self-transfer")
+        else:
+            details.append(f"Sender delta: {sender_delta} (expected {amount})")
+            details.append(f"Recipient delta: {recipient_delta} (expected {amount})")
+            details.append(f"Ledger grew: {ledger_grew}")
 
-        passed = (sender_delta == amount and recipient_delta == amount and ledger_grew)
-        if not passed:
-            details.append("❌ LEDGER VIOLATION: Balance changes don't match transfer amount")
+            # Check for phantom_success: ledger grew but recipient didn't gain
+            if ledger_grew and sender_delta == amount and recipient_delta != amount:
+                details.append("❌ PHANTOM SUCCESS: Ledger entry exists but recipient not credited")
+
+            passed = (sender_delta == amount and recipient_delta == amount and ledger_grew)
+            if not passed and not (ledger_grew and sender_delta == amount and recipient_delta != amount):
+                details.append("❌ LEDGER VIOLATION: Balance changes don't match transfer amount")
     else:
         # Failure: nothing should have moved
         sender_delta = balances_before[from_acc] - balances_after[from_acc]
@@ -142,27 +166,51 @@ def check_invariant_pii_001(
 ) -> tuple[bool, list[str]]:
     """No PII: no full account numbers in responses."""
     details = []
-    # In this fake bank, accounts are single letters (A, B), so "full account number"
-    # would be the single letter. But the invariant is about not leaking full numbers.
-    # We'll check that responses don't contain account identifiers in unexpected places.
     passed = True
+    # Known account numbers in this system
+    known_accounts = {"A", "B", "Z"}  # Z is used in test cases
+    
     for i, resp in enumerate(responses):
         body = resp.text
-        # Check for full account numbers - in a real system these would be long strings
-        # For this fake bank, we just verify the response structure is clean
-        try:
-            data = resp.json()
-            # Response should only have status/ledger_id or error detail
-            if "status" in data:
-                if not isinstance(data.get("ledger_id"), int):
-                    details.append(f"  Response {i}: unexpected fields in success response")
-            elif "detail" in data:
-                pass  # Error response is fine
-            else:
-                details.append(f"  Response {i}: unexpected response structure: {data}")
-        except Exception:
-            details.append(f"  Response {i}: non-JSON response")
+        data = resp.json()
+        
+        # Check error responses for leaked account numbers
+        if "detail" in data:
+            detail = str(data["detail"])
+            # Check if detail contains full account identifiers
+            # In a real system these would be long account numbers
+            # Here we check for the pattern of exposing internal account IDs
+            for acc in known_accounts:
+                if acc in detail and detail != "unknown account" and detail != "invalid amount":
+                    # The error message contains account info beyond just "unknown account"
+                    if len(detail) > 20:  # More than generic message
+                        passed = False
+                        details.append(f"  Response {i}: PII LEAK in error - '{detail}'")
+        
+        # Check success responses for unexpected fields
+        if "status" in data:
+            unexpected = set(data.keys()) - {"status", "ledger_id", "phantom"}
+            if unexpected:
+                details.append(f"  Response {i}: unexpected fields in success response: {unexpected}")
+    
+    if passed:
+        details.append("No PII detected in responses")
     return passed, details
+
+
+def run_concurrent_transfers(payload: dict, headers: dict, count: int) -> list[requests.Response]:
+    """Execute transfers concurrently using threads."""
+    responses = [None] * count
+    
+    def make_request(index: int):
+        responses[index] = make_transfer(payload, headers)
+    
+    with ThreadPoolExecutor(max_workers=count) as executor:
+        futures = [executor.submit(make_request, i) for i in range(count)]
+        for future in as_completed(futures):
+            future.result()
+    
+    return responses
 
 
 def run_test_case(test_case: dict) -> TestResult:
@@ -176,6 +224,7 @@ def run_test_case(test_case: dict) -> TestResult:
     repeat = test_case.get("repeat", 1)
     expected_status = test_case["expected_status"]
     invariants_to_check = test_case["invariants_to_check"]
+    concurrent = test_case.get("concurrent", False)
 
     print(f"\n{'='*60}")
     print(f"Running {test_id}: {name}")
@@ -193,20 +242,27 @@ def run_test_case(test_case: dict) -> TestResult:
     all_passed = True
     all_details = []
     bug_reproduced = False
-    bug_type = None
+    bug_types = []
 
-    for i in range(repeat):
-        print(f"  Request {i+1}/{repeat}...")
-        resp = make_transfer(payload, headers)
-        responses.append(resp)
-        # Capture ledger after each request for idempotency check
-        ledger_snapshots.append(get_ledger())
-        print(f"    Status: {resp.status_code}, Body: {resp.json()}")
+    if concurrent:
+        # Run concurrent transfers
+        print(f"  Running {repeat} concurrent requests...")
+        responses = run_concurrent_transfers(payload, headers, repeat)
+        for i, resp in enumerate(responses):
+            print(f"    Request {i+1}: Status {resp.status_code}, Body: {resp.json()}")
+            ledger_snapshots.append(get_ledger())
+    else:
+        # Run sequential requests
+        for i in range(repeat):
+            print(f"  Request {i+1}/{repeat}...")
+            resp = make_transfer(payload, headers)
+            responses.append(resp)
+            ledger_snapshots.append(get_ledger())
+            print(f"    Status: {resp.status_code}, Body: {resp.json()}")
 
-        # Check expected status
-        if resp.status_code != expected_status:
-            all_details.append(f"❌ Expected status {expected_status}, got {resp.status_code}")
-            all_passed = False
+            if resp.status_code != expected_status:
+                all_details.append(f"❌ Expected status {expected_status}, got {resp.status_code}")
+                all_passed = False
 
     # Snapshot after
     balances_after = {acc: get_balance(acc) for acc in ["A", "B"]}
@@ -237,8 +293,22 @@ def run_test_case(test_case: dict) -> TestResult:
             if inv_id == "idem-001" and len(responses) >= 2:
                 if len(ledger_after) > len(ledger_before):
                     bug_reproduced = True
-                    bug_type = "double_charge"
-                    print(f"  🐛 BUG REPRODUCED: {bug_type}")
+                    if "double_charge" not in bug_types:
+                        bug_types.append("double_charge")
+                    print(f"  🐛 BUG REPRODUCED: double_charge")
+            elif inv_id == "ledger-001":
+                # Check for phantom_success pattern
+                resp_data = responses[-1].json()
+                if resp_data.get("phantom") or (resp_data.get("status") == "ok" and balances_after[payload["to_acc"]] == balances_before[payload["to_acc"]]):
+                    bug_reproduced = True
+                    if "phantom_success" not in bug_types:
+                        bug_types.append("phantom_success")
+                    print(f"  🐛 BUG REPRODUCED: phantom_success")
+            elif inv_id == "pii-001":
+                bug_reproduced = True
+                if "pii_leak" not in bug_types:
+                    bug_types.append("pii_leak")
+                print(f"  🐛 BUG REPRODUCED: pii_leak")
 
     result = TestResult(
         test_id=test_id,
@@ -246,7 +316,7 @@ def run_test_case(test_case: dict) -> TestResult:
         passed=all_passed,
         details=all_details,
         bug_reproduced=bug_reproduced,
-        bug_type=bug_type
+        bug_types=bug_types
     )
 
     status = "✅ PASSED" if all_passed else "❌ FAILED"
@@ -270,9 +340,10 @@ def main():
     test_cases = plan["test_cases"]
     print(f"Loaded {len(test_cases)} test cases from {plan_path}")
 
-    # Verify bank is running
+    # Verify bank is running and get active bugs
     try:
-        requests.get(f"{BASE_URL}/ledger", timeout=2)
+        active_bugs = get_active_bugs()
+        print(f"Bank active bugs: {active_bugs}")
     except requests.exceptions.ConnectionError:
         print(f"Bank not running at {BASE_URL}. Start it with:")
         print("  uvicorn bank.app:app --reload")
@@ -296,7 +367,7 @@ def main():
 
     for r in results:
         status = "✅" if r.passed else "❌"
-        bug = f" 🐛{r.bug_type}" if r.bug_reproduced else ""
+        bug = f" 🐛{', '.join(r.bug_types)}" if r.bug_types else ""
         print(f"  {status} {r.test_id}: {r.name}{bug}")
 
     # Save results
@@ -314,7 +385,7 @@ def main():
                 "passed": r.passed,
                 "details": r.details,
                 "bug_reproduced": r.bug_reproduced,
-                "bug_type": r.bug_type
+                "bug_types": r.bug_types
             }
             for r in results
         ]

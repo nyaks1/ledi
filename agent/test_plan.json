@@ -62,38 +62,102 @@
     },
     {
       "id": "tc-003",
-      "name": "Insufficient funds",
+      "name": "Boundary: exact balance drain",
       "endpoint": "/transfer",
       "method": "POST",
       "payload": {
-        "from_acc": "B",
-        "to_acc": "A",
-        "amount": 60000
+        "from_acc": "A",
+        "to_acc": "B",
+        "amount": 100000
       },
       "headers": {
-        "Idempotency-Key": "idem-insufficient-001"
+        "Idempotency-Key": "idem-drain-001"
       },
-      "expected_status": 400,
-      "invariants_to_check": ["ledger-001"]
+      "expected_status": 200,
+      "invariants_to_check": ["ledger-001", "pii-001"]
     },
     {
       "id": "tc-004",
-      "name": "Unknown account",
+      "name": "Boundary: balance + 1 (insufficient funds)",
       "endpoint": "/transfer",
       "method": "POST",
       "payload": {
-        "from_acc": "Z",
+        "from_acc": "A",
         "to_acc": "B",
-        "amount": 1000
+        "amount": 100001
       },
       "headers": {
-        "Idempotency-Key": "idem-unknown-001"
+        "Idempotency-Key": "idem-overdraft-001"
       },
-      "expected_status": 404,
-      "invariants_to_check": ["ledger-001"]
+      "expected_status": 400,
+      "invariants_to_check": ["ledger-001", "pii-001"]
     },
     {
       "id": "tc-005",
+      "name": "Self-transfer (A to A)",
+      "endpoint": "/transfer",
+      "method": "POST",
+      "payload": {
+        "from_acc": "A",
+        "to_acc": "A",
+        "amount": 10000
+      },
+      "headers": {
+        "Idempotency-Key": "idem-self-001"
+      },
+      "expected_status": 200,
+      "invariants_to_check": ["ledger-001", "pii-001"]
+    },
+    {
+      "id": "tc-006",
+      "name": "Missing idempotency key",
+      "endpoint": "/transfer",
+      "method": "POST",
+      "payload": {
+        "from_acc": "A",
+        "to_acc": "B",
+        "amount": 10000
+      },
+      "headers": {},
+      "expected_status": 422,
+      "invariants_to_check": ["ledger-001", "pii-001"]
+    },
+    {
+      "id": "tc-007",
+      "name": "Huge integer amount",
+      "endpoint": "/transfer",
+      "method": "POST",
+      "payload": {
+        "from_acc": "A",
+        "to_acc": "B",
+        "amount": 999999999999999999
+      },
+      "headers": {
+        "Idempotency-Key": "idem-huge-001"
+      },
+      "expected_status": 400,
+      "invariants_to_check": ["ledger-001", "pii-001"]
+    },
+    {
+      "id": "tc-008",
+      "name": "Concurrent transfers (race condition)",
+      "endpoint": "/transfer",
+      "method": "POST",
+      "payload": {
+        "from_acc": "A",
+        "to_acc": "B",
+        "amount": 30000
+      },
+      "headers": {
+        "Idempotency-Key": "idem-concurrent-001"
+      },
+      "concurrent": true,
+      "repeat": 3,
+      "expected_status": 200,
+      "invariants_to_check": ["idem-001", "ledger-001"]
+    },
+    {
+      "id": "tc-009",
       "name": "Zero amount",
       "endpoint": "/transfer",
       "method": "POST",
@@ -106,10 +170,10 @@
         "Idempotency-Key": "idem-zero-001"
       },
       "expected_status": 400,
-      "invariants_to_check": ["ledger-001"]
+      "invariants_to_check": ["ledger-001", "pii-001"]
     },
     {
-      "id": "tc-006",
+      "id": "tc-010",
       "name": "Negative amount",
       "endpoint": "/transfer",
       "method": "POST",
@@ -122,24 +186,23 @@
         "Idempotency-Key": "idem-negative-001"
       },
       "expected_status": 400,
-      "invariants_to_check": ["ledger-001"]
+      "invariants_to_check": ["ledger-001", "pii-001"]
     },
     {
-      "id": "tc-007",
-      "name": "Concurrent transfers same account",
+      "id": "tc-011",
+      "name": "Unknown account",
       "endpoint": "/transfer",
       "method": "POST",
       "payload": {
-        "from_acc": "A",
+        "from_acc": "Z",
         "to_acc": "B",
-        "amount": 30000
+        "amount": 1000
       },
       "headers": {
-        "Idempotency-Key": "idem-concurrent-001"
+        "Idempotency-Key": "idem-unknown-001"
       },
-      "repeat": 3,
-      "expected_status": 200,
-      "invariants_to_check": ["idem-001", "ledger-001"]
+      "expected_status": 404,
+      "invariants_to_check": ["ledger-001", "pii-001"]
     }
   ]
 }

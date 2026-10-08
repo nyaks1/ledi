@@ -105,6 +105,22 @@
         }
       }
     },
+    "/_test/config": {
+      "get": {
+        "summary": "Config",
+        "operationId": "config__test_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/_test/reset": {
       "post": {
         "summary": "Reset",

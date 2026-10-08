@@ -1,166 +1,123 @@
 """
-Report: Generates hit-rate table from test results
-Shows bugs planted vs caught, false alarms
+Report: renders results/evaluation.json into results/hit_rate.md.
+
+Numbers are computed per scenario against what the bank says is planted
+(GET /_test/config, captured by the runner). A bug counts once per scenario,
+so the hit rate can never exceed 100%.
 """
 import json
 from pathlib import Path
-from typing import Any
-
-import requests
 
 
-BASE_URL = "http://127.0.0.1:8000"
+def score(scenario: dict) -> dict:
+    planted = set(scenario["active_bugs"])
+    found = set()
+    observations = []
+    for r in scenario["results"]:
+        found.update(r["findings"])
+        for o in r["observations"]:
+            observations.append((r["test_id"], r["name"], o))
+    return {
+        "name": scenario["name"],
+        "planted": planted,
+        "caught": planted & found,
+        "missed": planted - found,
+        "false_findings": found - planted,  # anything flagged that was not planted
+        "observations": observations,
+        "results": scenario["results"],
+    }
 
 
-def get_active_bugs() -> list[str]:
-    """Get list of active bugs from bank."""
-    try:
-        resp = requests.get(f"{BASE_URL}/_test/config", timeout=5)
-        resp.raise_for_status()
-        return resp.json().get("active_bugs", [])
-    except Exception:
-        return []
+def render(evaluation: dict) -> str:
+    scores = [score(s) for s in evaluation["scenarios"]]
+    planted_total = sum(len(s["planted"]) for s in scores)
+    caught_total = sum(len(s["caught"]) for s in scores)
+    false_total = sum(len(s["false_findings"]) for s in scores)
+    clean = next((s for s in scores if not s["planted"]), None)
 
-
-def load_results(path: Path) -> dict[str, Any]:
-    with open(path) as f:
-        return json.load(f)
-
-
-def generate_hit_rate_report(results: dict[str, Any], active_bugs: list[str]) -> str:
-    """Generate markdown hit-rate report."""
-    summary = results["summary"]
-    test_results = results["results"]
-
-    # Count bugs by type that were CAUGHT (distinct types)
-    caught_bug_types = set()
-    for r in test_results:
-        if r["bug_reproduced"] and r.get("bug_types"):
-            caught_bug_types.update(r["bug_types"])
-
-    # Planted bugs come from the bank's config endpoint
-    planted_bug_types = set(active_bugs)
-
-    lines = [
+    L = [
         "# Hit Rate Report",
         "",
-        f"**Generated from:** {len(test_results)} test cases",
-        f"**Date:** {__import__('datetime').datetime.now().isoformat()}",
+        f"Generated {evaluation['generated']} from **{evaluation['n_cases']} test cases** "
+        f"run against **{len(scores)} bank configurations**.",
         "",
-        "## Summary",
+        "## Headline",
         "",
-        f"- **Total tests:** {summary['total']}",
-        f"- **Passed:** {summary['passed']}",
-        f"- **Failed:** {summary['failed']}",
-        f"- **Bugs reproduced:** {summary['bugs_reproduced']}",
-        "",
-        "## Bug Detection Matrix",
-        "",
-        "| Bug Type | Planted | Caught | Hit Rate |",
-        "|----------|---------|--------|----------|",
+        f"- **Planted bugs caught: {caught_total}/{planted_total}** "
+        "(each bug counted once per scenario where it is planted)",
+        f"- **False findings (flagged but not planted): {false_total}**",
     ]
+    if clean is not None:
+        L.append(
+            f"- **Clean bank: {len(clean['results'])} cases, "
+            f"{len(clean['false_findings'])} false findings**"
+        )
+    L += [
+        "",
+        "## Per scenario",
+        "",
+        "| Scenario | Planted | Caught | Missed | False findings | Cases failed |",
+        "|---|---|---|---|---|---|",
+    ]
+    for s in scores:
+        failed = sum(1 for r in s["results"] if not r["passed"])
+        fmt = lambda x: ", ".join(sorted(x)) or "—"
+        L.append(
+            f"| {s['name']} | {fmt(s['planted'])} | {fmt(s['caught'])} | "
+            f"{fmt(s['missed'])} | {fmt(s['false_findings'])} | {failed}/{len(s['results'])} |"
+        )
 
-    all_bug_types = planted_bug_types | caught_bug_types
-    for bug_type in sorted(all_bug_types):
-        planted = "✅" if bug_type in planted_bug_types else "❌"
-        caught = "✅" if bug_type in caught_bug_types else "❌"
-        
-        if bug_type in planted_bug_types:
-            hit_rate = "1/1" if bug_type in caught_bug_types else "0/1"
-            status = "✅" if bug_type in caught_bug_types else "❌"
-        else:
-            hit_rate = "N/A (not planted)"
-            status = "⚠️"
-        lines.append(f"| {bug_type} | {planted} | {caught} | {hit_rate} {status} |")
+    L += ["", "## Evidence: how each bug was caught", ""]
+    for s in scores:
+        if len(s["planted"]) != 1:
+            continue
+        L.append(f"### {next(iter(s['planted']))}")
+        for r in s["results"]:
+            if r["passed"]:
+                continue
+            L.append(f"- **{r['test_id']}** {r['name']}")
+            for d in r["details"]:
+                if "VIOLATION" in d:
+                    L.append(f"  - {d}")
+        L.append("")
 
-    # Overall hit rate
-    if planted_bug_types:
-        overall_caught = len(planted_bug_types & caught_bug_types)
-        overall_total = len(planted_bug_types)
-        overall_rate = f"{overall_caught}/{overall_total}"
+    obs = [(s["name"], *o) for s in scores for o in s["observations"]]
+    clean_obs = [o for o in obs if o[0].startswith("clean")]
+    L += ["## Needs human triage (expectation mismatches)", ""]
+    if clean_obs:
+        L.append(
+            "On the **clean** bank the planner's expected status differed from the "
+            "bank's actual status. Either the planner guessed wrong or the bank has a "
+            "real validation gap. Each one needs a human decision:"
+        )
+        L.append("")
+        for _, tid, name, o in clean_obs:
+            L.append(f"- {tid} {name}: {o}")
     else:
-        overall_rate = "N/A (no bugs planted)"
+        L.append("None on the clean bank.")
 
-    lines.extend([
+    L += [
         "",
-        f"**Overall Hit Rate: {overall_rate}**",
+        "## Limits (read before trusting the numbers)",
         "",
-        "## Test Case Results",
+        "- The three bug classes and the three rules were designed together by the author, "
+        "so a high catch rate shows the pipeline works, not that it generalises to unknown bugs.",
+        "- The bank is a small in-memory fake with test-only endpoints (`/ledger`, "
+        "`/accounts/{id}`). A real bank would need an equivalent read-only audit view.",
+        "- All data is synthetic. No personal information is stored or sent anywhere.",
         "",
-        "| Test ID | Name | Status | Bug Found |",
-        "|---------|------|--------|-----------|",
-    ])
-
-    for r in test_results:
-        status = "✅ PASS" if r["passed"] else "❌ FAIL"
-        bug = ", ".join(r.get("bug_types", [])) if r["bug_reproduced"] else "—"
-        lines.append(f"| {r['test_id']} | {r['name']} | {status} | {bug} |")
-
-    lines.extend([
-        "",
-        "## Detailed Findings",
-        "",
-    ])
-
-    for r in test_results:
-        if not r["passed"] or r["bug_reproduced"]:
-            lines.append(f"### {r['test_id']}: {r['name']}")
-            lines.append("")
-            for detail in r["details"]:
-                lines.append(f"- {detail}")
-            lines.append("")
-
-    # False alarm analysis: test failed but no known bug was caught
-    false_alarms = [r for r in test_results if not r["passed"] and not r["bug_reproduced"]]
-    if false_alarms:
-        lines.extend([
-            "## False Alarms",
-            "",
-            f"Found {len(false_alarms)} test failure(s) without a reproduced bug:",
-            "",
-        ])
-        for r in false_alarms:
-            lines.append(f"- **{r['test_id']}**: {r['name']}")
-            for detail in r["details"]:
-                lines.append(f"  - {detail}")
-        lines.append("")
-
-    lines.extend([
-        "## Verdict",
-        "",
-    ])
-
-    if not planted_bug_types:
-        verdict = "⏸️ **SKIPPED** - No bugs were planted (BUGS env var not set)"
-    elif len(planted_bug_types & caught_bug_types) == len(planted_bug_types) and len(false_alarms) == 0:
-        verdict = "🟢 **EXCELLENT** - All planted bugs caught, no false alarms"
-    elif len(planted_bug_types & caught_bug_types) == len(planted_bug_types):
-        verdict = f"🟡 **GOOD** - All planted bugs caught, but {len(false_alarms)} false alarm(s)"
-    elif len(planted_bug_types & caught_bug_types) > 0:
-        verdict = f"🟠 **PARTIAL** - Caught {len(planted_bug_types & caught_bug_types)}/{len(planted_bug_types)} planted bug types, {len(false_alarms)} false alarm(s)"
-    else:
-        verdict = "🔴 **POOR** - Planted bugs not caught"
-
-    lines.append(verdict)
-
-    return "\n".join(lines)
+    ]
+    return "\n".join(L)
 
 
 def main():
-    results_path = Path("results/run_results.json")
-    if not results_path.exists():
-        print(f"No results found at {results_path}. Run runner.py first.")
+    p = Path("results/evaluation.json")
+    if not p.exists():
+        print("No results/evaluation.json. Run agent/evaluate.py first.")
         return
-
-    results = load_results(results_path)
-    active_bugs = get_active_bugs()
-    report = generate_hit_rate_report(results, active_bugs)
-
-    output_path = Path("results/hit_rate.md")
-    output_path.parent.mkdir(exist_ok=True)
-    output_path.write_text(report)
-    print(f"Report written to {output_path}")
-    print("\n" + report)
+    md = render(json.loads(p.read_text()))
+    Path("results/hit_rate.md").write_text(md)
+    print(md)
 
 
 if __name__ == "__main__":

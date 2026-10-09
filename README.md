@@ -1,168 +1,113 @@
 # sebaka-agent
 
-An AI agent for Software Quality Engineering (API testing, money-moving APIs).
+An AI agent that tests money-moving APIs. It reads an OpenAPI spec, invents
+attacks a human tester might not write, fires them, and judges the result by
+**reading the ledger and balances, never by trusting "200 OK"**.
 
-> Status: **Complete** — fake bank, planner, runner, and reporter all working.
+Built for the Sebaka AI Agent Challenge (Software Quality Engineering, API testing).
 
 ## Problem
 
-Payment APIs fail in ways nobody wrote a test for. A test suite is a list of
-what a human imagined, so the bug that escapes is the one nobody imagined.
+A test suite is a list of what a human imagined. The payment bug that reaches
+production is the one nobody imagined: a phone drops signal, the backend charges,
+the client retries, and the customer is charged twice.
 
 ## Villain
 
-The untested gap between what an API promises and what it actually does.
-Example: a phone drops signal, the backend charges, the client retries, and
-the customer is charged twice.
+The untested gap between what a payment API promises and what it actually does.
 
-## Hero
+## The agent: receives, decides, does, returns
 
-An agent that:
-- **Receives** an OpenAPI spec.
-- **Decides** which endpoints move money and which rules must always hold.
-- **Does** fires edge cases and retries, then checks the ledger instead of
-  trusting "200 OK".
-- **Returns** only findings it reproduced, with the request sequence.
+| Step | Who does it | What happens |
+|---|---|---|
+| Receives | `agent/planner.py` | the OpenAPI spec and a description of the test accounts |
+| Decides | Gemini (LLM) | which endpoints move money, and which edge cases try to break three rules |
+| Does | `agent/runner.py` (plain Python, no LLM) | fires every case, then reads `/ledger` and `/accounts/{id}` |
+| Returns | `agent/report.py` | only violations it reproduced, with the rule that broke |
 
-## Rules ("invariants") the agent checks
+The LLM invents the attacks. Deterministic code judges them, so the verdict is
+never a model's opinion.
 
-1. **Idempotency (idem-001)**: A retried request (same idempotency key) returns the same response and creates no new ledger entry.
-2. **Ledger Consistency (ledger-001)**: A 200 means the sender lost exactly X and the recipient gained exactly X. A failure means nothing moved.
-3. **No PII (pii-001)**: No response or log line contains a full account or ID number in plaintext.
+## The three rules
 
-## Planted Bugs (each targets one invariant)
+1. **idem-001**: a retry with the same Idempotency-Key returns the same response
+   and creates no new ledger entry.
+2. **ledger-001**: a 200 means the sender lost exactly X and the recipient gained
+   exactly X; a failed request moves nothing.
+3. **pii-001**: no response contains a full account or ID number.
 
-| Bug | What goes wrong | Invariant that catches it |
-|-----|-----------------|---------------------------|
-| `double_charge` | Retry with same idempotency key charges again | idem-001 |
-| `phantom_success` | 200 OK + ledger row, but recipient never credited | ledger-001 |
-| `pii_leak` | Error messages echo full synthetic account numbers | pii-001 |
+## Proof it works (and doesn't cry wolf)
+
+`agent/evaluate.py` runs the same test plan against five versions of a fake bank:
+clean, each planted bug alone, and all three together. Results are in
+[`results/hit_rate.md`](results/hit_rate.md).
+
+| Planted bug | Rule that catches it |
+|---|---|
+| `double_charge` (retry charges again) | idem-001 |
+| `phantom_success` (sender charged, recipient never credited, 200 returned) | ledger-001 |
+| `pii_leak` (error message echoes a full account number) | pii-001 |
+
+The key number is the **clean bank row: zero false findings**. An agent that
+flags problems that aren't there gets ignored by the team within a week.
+
+## Run it
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env            # add your GEMINI_API_KEY
+
+# 1. export the spec the planner reads
+python -c "import bank.app, json; print(json.dumps(bank.app.app.openapi(), indent=2))" > bank/openapi.json
+
+# 2. the LLM writes the test plan (agent/test_plan.json is committed as a fallback)
+python agent/planner.py
+
+# 3. run the plan against all five bank configurations and write the report
+python agent/evaluate.py
+cat results/hit_rate.md
+```
+
+`evaluate.py` starts and stops the fake bank itself and needs no network, so
+step 3 works offline. Only step 2 calls Gemini.
+
+To try one configuration by hand:
+
+```bash
+BUGS=double_charge uvicorn bank.app:app --port 8000     # terminal 1
+python agent/runner.py                                  # terminal 2
+```
 
 ## Layout
 
 ```
-bank/app.py      fake bank with switchable planted bugs
-agent/
-  planner.py     Gemini: OpenAPI spec → invariants + test cases (JSON)
-  runner.py      plain Python: fires cases, checks the ledger
-  report.py      hit-rate table: bugs planted vs caught, false alarms
-results/         hit-rate table: bugs planted vs caught, false alarms
-try.py           manual proof of the double-charge bug
+bank/app.py          fake bank with switchable planted bugs (BUGS env var)
+bank/openapi.json    the spec the planner reads
+agent/planner.py     spec -> rules + test cases (Gemini), with schema validation and retries
+agent/runner.py      deterministic executor and judge
+agent/evaluate.py    five bank configurations -> results/evaluation.json + hit_rate.md
+agent/report.py      renders the hit-rate report
+agent/test_plan.json the generated plan
+results/             evaluation output
 ```
 
-## Quickstart
+## Limits
 
-```bash
-# 1. Set up environment
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-
-# 2. Copy .env.example to .env and add your Gemini API key
-cp .env.example .env
-# edit .env with your GEMINI_API_KEY
-
-# 3. Generate OpenAPI spec from the bank
-python -c "import bank.app; import json; print(json.dumps(bank.app.app.openapi(), indent=2))" > bank/openapi.json
-
-# 4. Generate test plan (optional - pre-generated plan exists)
-python agent/planner.py
-
-# 5. Start the bank (correct behavior)
-uvicorn bank.app:app --host 127.0.0.1 --port 8000
-
-# 6. Run the test suite
-python agent/runner.py
-
-# 7. Generate report
-python agent/report.py
-cat results/hit_rate.md
-```
-
-## Testing the Bugs
-
-```bash
-# Stop bank (Ctrl+C), then restart with bugs enabled
-BUGS=double_charge,phantom_success,pii_leak uvicorn bank.app:app --host 127.0.0.1 --port 8000
-
-# In another terminal, run tests again
-python agent/runner.py
-python agent/report.py
-cat results/hit_rate.md
-```
-
-### Expected Results
-
-| Bug State | Tests | Bugs Caught | Verdict |
-|-----------|-------|-------------|---------|
-| **OFF** (correct) | 11/11 PASS | 0/0 | ⏸️ SKIPPED |
-| **ON** (all 3 bugs) | 10 FAIL, 1 PASS | 3/3 | 🟢 EXCELLENT |
-
-### Test Cases (11 total)
-
-| ID | Name | Invariants Checked | Catches |
-|----|------|-------------------|---------|
-| tc-001 | Happy path transfer | ledger-001, pii-001 | phantom_success |
-| tc-002 | Retry with same idempotency key | idem-001, ledger-001 | double_charge, phantom_success |
-| tc-003 | Boundary: exact balance drain | ledger-001, pii-001 | phantom_success |
-| tc-004 | Boundary: balance + 1 (insufficient funds) | ledger-001, pii-001 | pii_leak |
-| tc-005 | Self-transfer (A to A) | ledger-001, pii-001 | phantom_success |
-| tc-006 | Missing idempotency key | ledger-001, pii-001 | — |
-| tc-007 | Huge integer amount | ledger-001, pii-001 | pii_leak |
-| tc-008 | Concurrent transfers (race condition) | idem-001, ledger-001 | double_charge, phantom_success |
-| tc-009 | Zero amount | ledger-001, pii-001 | pii_leak |
-| tc-010 | Negative amount | ledger-001, pii-001 | pii_leak |
-| tc-011 | Unknown account | ledger-001, pii-001 | pii_leak |
-
-## Manual Proof (try.py)
-
-```bash
-# With bug ON
-BUGS=double_charge uvicorn bank.app:app --reload
-python try.py
-# Account A drops by R1000, ledger has 2 rows
-
-# With bug OFF
-uvicorn bank.app:app --reload
-python try.py
-# Account A drops by R500, ledger has 1 row
-```
-
-## Components
-
-### Bank (`bank/app.py`)
-- FastAPI server with in-memory accounts & ledger
-- `/transfer` endpoint with idempotency key header
-- Test-only endpoints: `/accounts/{acc}`, `/ledger`, `/_test/reset`, `/_test/config`
-- Plantable bugs via `BUGS` env var: `double_charge`, `phantom_success`, `pii_leak`
-- Synthetic account numbers for PII testing: A=1234567890, B=0987654321
-
-### Planner (`agent/planner.py`)
-- Loads OpenAPI spec from `bank/openapi.json`
-- Uses Gemini to generate `agent/test_plan.json` with:
-  - Money-moving endpoints
-  - Fixed invariants (idem-001, ledger-001, pii-001)
-  - Derived test cases covering boundaries, self-transfer, missing header, huge int, concurrency
-
-### Runner (`agent/runner.py`)
-- Deterministic executor — no LLM calls
-- Resets bank before each test case for isolation
-- Fires requests (sequential or concurrent via threads), snapshots balances & ledger before/after
-- Verifies invariants by reading truth endpoints, not trusting HTTP status
-- Labels each finding by the invariant that failed
-
-### Report (`agent/report.py`)
-- Reads `results/run_results.json`
-- Queries `/_test/config` for ground-truth planted bugs
-- Generates `results/hit_rate.md` with:
-  - Bug detection matrix (planted vs caught by distinct type)
-  - Per-test results
-  - Detailed findings for failures
-  - False alarm analysis
-  - Overall verdict (EXCELLENT/GOOD/PARTIAL/POOR/SKIPPED)
+- The three bug classes and the three rules were designed together, so a high
+  catch rate shows the pipeline works, not that it finds unknown bugs.
+- The runner sends retries one after another. It does **not** test true
+  concurrency or race conditions.
+- The runner only executes `POST /transfer`.
+- The bank is a small in-memory fake with test-only endpoints (`/ledger`,
+  `/accounts/{id}`). A real system would need an equivalent read-only audit view.
+- Cases where the planner's expected status differs from the bank's are listed
+  in the report for a human to triage. They are not counted as bugs.
 
 ## POPIA
 
-All data is synthetic. No personal information is collected or stored. The
-only planned outbound call is the API spec and test results to the LLM
-provider; no real customer data is ever sent.
+All data is synthetic (two fake accounts, fake account numbers). No personal
+information is collected or stored. The only outbound call is to Gemini, and it
+receives the OpenAPI spec and a description of the synthetic test accounts. It
+never receives test results or responses. Nothing is retained by this project;
+the bank resets between cases.

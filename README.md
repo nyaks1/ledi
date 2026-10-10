@@ -1,4 +1,4 @@
-# Sebaka
+# Ledi
 
 An AI agent that tests money-moving APIs. It reads an OpenAPI spec, invents
 attacks a human tester might not write, fires them, and judges the result by

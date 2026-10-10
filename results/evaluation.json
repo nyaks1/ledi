@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-10 07:37:27",
+  "generated": "2026-10-10 12:58:31",
   "n_cases": 12,
   "scenarios": [
     {
@@ -12,7 +12,8 @@
           "findings": [],
           "observations": [],
           "details": [
-            "[ledger-001] sender lost 100000, recipient gained 100000, ledger rows added 1, successes 1"
+            "[ledger-001] sender lost 100000, recipient gained 100000, ledger rows added 1, successes 1",
+            "[perf-001] slowest response 14 ms (budget 500 ms)"
           ]
         },
         {
@@ -24,7 +25,8 @@
             "request 1: expected 422, got 400"
           ],
           "details": [
-            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[perf-001] slowest response 7 ms (budget 500 ms)"
           ]
         },
         {
@@ -36,7 +38,8 @@
             "request 1: expected 422, got 400"
           ],
           "details": [
-            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[perf-001] slowest response 18 ms (budget 500 ms)"
           ]
         },
         {
@@ -48,7 +51,8 @@
             "request 1: expected 422, got 400"
           ],
           "details": [
-            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[perf-001] slowest response 10 ms (budget 500 ms)"
           ]
         },
         {
@@ -60,7 +64,8 @@
             "request 1: expected 422, got 400"
           ],
           "details": [
-            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[perf-001] slowest response 4 ms (budget 500 ms)"
           ]
         },
         {
@@ -72,7 +77,8 @@
             "request 1: expected 422, got 400"
           ],
           "details": [
-            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[perf-001] slowest response 3 ms (budget 500 ms)"
           ]
         },
         {
@@ -83,7 +89,9 @@
           "observations": [
             "request 1: expected 422, got 404"
           ],
-          "details": []
+          "details": [
+            "[perf-001] slowest response 3 ms (budget 500 ms)"
+          ]
         },
         {
           "test_id": "tc-008",
@@ -93,7 +101,9 @@
           "observations": [
             "request 1: expected 422, got 404"
           ],
-          "details": []
+          "details": [
+            "[perf-001] slowest response 4 ms (budget 500 ms)"
+          ]
         },
         {
           "test_id": "tc-009",
@@ -104,7 +114,8 @@
           "details": [
             "[idem-001] responses identical: True",
             "[idem-001] ledger rows after 1st request: 1, after last retry: 1",
-            "[ledger-001] sender lost 10000, recipient gained 10000, ledger rows added 1, successes 2"
+            "[ledger-001] sender lost 10000, recipient gained 10000, ledger rows added 1, successes 2",
+            "[perf-001] slowest response 9 ms (budget 500 ms)"
           ]
         },
         {
@@ -116,7 +127,8 @@
           "details": [
             "[idem-001] responses identical: True",
             "[idem-001] ledger rows after 1st request: 1, after last retry: 1",
-            "[ledger-001] sender lost 5000, recipient gained 5000, ledger rows added 1, successes 3"
+            "[ledger-001] sender lost 5000, recipient gained 5000, ledger rows added 1, successes 3",
+            "[perf-001] slowest response 6 ms (budget 500 ms)"
           ]
         },
         {
@@ -126,7 +138,8 @@
           "findings": [],
           "observations": [],
           "details": [
-            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[perf-001] slowest response 14 ms (budget 500 ms)"
           ]
         },
         {
@@ -138,7 +151,19 @@
             "request 1: expected 422, got 200"
           ],
           "details": [
-            "[ledger-001] sender lost 2000, recipient gained 2000, ledger rows added 1, successes 1"
+            "[ledger-001] sender lost 2000, recipient gained 2000, ledger rows added 1, successes 1",
+            "[perf-001] slowest response 9 ms (budget 500 ms)"
+          ]
+        },
+        {
+          "test_id": "load-001",
+          "name": "Burst of 20 parallel transfers",
+          "passed": true,
+          "findings": [],
+          "observations": [],
+          "details": [
+            "[perf-002] 20/20 succeeded, p95 latency 56 ms (budget 500 ms)",
+            "[perf-002] sender lost 2000, recipient gained 2000, ledger rows 20"
           ]
         }
       ],
@@ -156,7 +181,8 @@
           "findings": [],
           "observations": [],
           "details": [
-            "[ledger-001] sender lost 100000, recipient gained 100000, ledger rows added 1, successes 1"
+            "[ledger-001] sender lost 100000, recipient gained 100000, ledger rows added 1, successes 1",
+            "[perf-001] slowest response 13 ms (budget 500 ms)"
           ]
         },
         {
@@ -168,7 +194,8 @@
             "request 1: expected 422, got 400"
           ],
           "details": [
-            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[perf-001] slowest response 5 ms (budget 500 ms)"
           ]
         },
         {
@@ -180,7 +207,8 @@
             "request 1: expected 422, got 400"
           ],
           "details": [
-            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[perf-001] slowest response 3 ms (budget 500 ms)"
           ]
         },
         {
@@ -192,7 +220,8 @@
             "request 1: expected 422, got 400"
           ],
           "details": [
-            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[perf-001] slowest response 9 ms (budget 500 ms)"
           ]
         },
         {
@@ -204,7 +233,8 @@
             "request 1: expected 422, got 400"
           ],
           "details": [
-            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[perf-001] slowest response 4 ms (budget 500 ms)"
           ]
         },
         {
@@ -216,7 +246,8 @@
             "request 1: expected 422, got 400"
           ],
           "details": [
-            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[perf-001] slowest response 7 ms (budget 500 ms)"
           ]
         },
         {
@@ -227,7 +258,9 @@
           "observations": [
             "request 1: expected 422, got 404"
           ],
-          "details": []
+          "details": [
+            "[perf-001] slowest response 3 ms (budget 500 ms)"
+          ]
         },
         {
           "test_id": "tc-008",
@@ -237,7 +270,9 @@
           "observations": [
             "request 1: expected 422, got 404"
           ],
-          "details": []
+          "details": [
+            "[perf-001] slowest response 5 ms (budget 500 ms)"
+          ]
         },
         {
           "test_id": "tc-009",
@@ -251,7 +286,8 @@
             "[idem-001] responses identical: False",
             "[idem-001] ledger rows after 1st request: 1, after last retry: 2",
             "[idem-001] VIOLATION: a retry with the same key created a new ledger entry",
-            "[ledger-001] sender lost 20000, recipient gained 20000, ledger rows added 2, successes 2"
+            "[ledger-001] sender lost 20000, recipient gained 20000, ledger rows added 2, successes 2",
+            "[perf-001] slowest response 3 ms (budget 500 ms)"
           ]
         },
         {
@@ -266,7 +302,8 @@
             "[idem-001] responses identical: False",
             "[idem-001] ledger rows after 1st request: 1, after last retry: 3",
             "[idem-001] VIOLATION: a retry with the same key created a new ledger entry",
-            "[ledger-001] sender lost 15000, recipient gained 15000, ledger rows added 3, successes 3"
+            "[ledger-001] sender lost 15000, recipient gained 15000, ledger rows added 3, successes 3",
+            "[perf-001] slowest response 4 ms (budget 500 ms)"
           ]
         },
         {
@@ -276,7 +313,8 @@
           "findings": [],
           "observations": [],
           "details": [
-            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[perf-001] slowest response 7 ms (budget 500 ms)"
           ]
         },
         {
@@ -288,7 +326,19 @@
             "request 1: expected 422, got 200"
           ],
           "details": [
-            "[ledger-001] sender lost 2000, recipient gained 2000, ledger rows added 1, successes 1"
+            "[ledger-001] sender lost 2000, recipient gained 2000, ledger rows added 1, successes 1",
+            "[perf-001] slowest response 3 ms (budget 500 ms)"
+          ]
+        },
+        {
+          "test_id": "load-001",
+          "name": "Burst of 20 parallel transfers",
+          "passed": true,
+          "findings": [],
+          "observations": [],
+          "details": [
+            "[perf-002] 20/20 succeeded, p95 latency 57 ms (budget 500 ms)",
+            "[perf-002] sender lost 2000, recipient gained 2000, ledger rows 20"
           ]
         }
       ],
@@ -309,7 +359,8 @@
           "observations": [],
           "details": [
             "[ledger-001] sender lost 100000, recipient gained 0, ledger rows added 1, successes 1",
-            "[ledger-001] VIOLATION: sender and recipient amounts differ (money created or lost)"
+            "[ledger-001] VIOLATION: sender and recipient amounts differ (money created or lost)",
+            "[perf-001] slowest response 15 ms (budget 500 ms)"
           ]
         },
         {
@@ -321,7 +372,8 @@
             "request 1: expected 422, got 400"
           ],
           "details": [
-            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[perf-001] slowest response 16 ms (budget 500 ms)"
           ]
         },
         {
@@ -333,7 +385,8 @@
             "request 1: expected 422, got 400"
           ],
           "details": [
-            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[perf-001] slowest response 4 ms (budget 500 ms)"
           ]
         },
         {
@@ -345,7 +398,8 @@
             "request 1: expected 422, got 400"
           ],
           "details": [
-            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[perf-001] slowest response 11 ms (budget 500 ms)"
           ]
         },
         {
@@ -357,7 +411,8 @@
             "request 1: expected 422, got 400"
           ],
           "details": [
-            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[perf-001] slowest response 6 ms (budget 500 ms)"
           ]
         },
         {
@@ -369,7 +424,8 @@
             "request 1: expected 422, got 400"
           ],
           "details": [
-            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[perf-001] slowest response 5 ms (budget 500 ms)"
           ]
         },
         {
@@ -380,7 +436,9 @@
           "observations": [
             "request 1: expected 422, got 404"
           ],
-          "details": []
+          "details": [
+            "[perf-001] slowest response 4 ms (budget 500 ms)"
+          ]
         },
         {
           "test_id": "tc-008",
@@ -390,7 +448,9 @@
           "observations": [
             "request 1: expected 422, got 404"
           ],
-          "details": []
+          "details": [
+            "[perf-001] slowest response 8 ms (budget 500 ms)"
+          ]
         },
         {
           "test_id": "tc-009",
@@ -404,7 +464,8 @@
             "[idem-001] responses identical: True",
             "[idem-001] ledger rows after 1st request: 1, after last retry: 1",
             "[ledger-001] sender lost 10000, recipient gained 0, ledger rows added 1, successes 2",
-            "[ledger-001] VIOLATION: sender and recipient amounts differ (money created or lost)"
+            "[ledger-001] VIOLATION: sender and recipient amounts differ (money created or lost)",
+            "[perf-001] slowest response 8 ms (budget 500 ms)"
           ]
         },
         {
@@ -419,7 +480,8 @@
             "[idem-001] responses identical: True",
             "[idem-001] ledger rows after 1st request: 1, after last retry: 1",
             "[ledger-001] sender lost 5000, recipient gained 0, ledger rows added 1, successes 3",
-            "[ledger-001] VIOLATION: sender and recipient amounts differ (money created or lost)"
+            "[ledger-001] VIOLATION: sender and recipient amounts differ (money created or lost)",
+            "[perf-001] slowest response 4 ms (budget 500 ms)"
           ]
         },
         {
@@ -429,7 +491,8 @@
           "findings": [],
           "observations": [],
           "details": [
-            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[perf-001] slowest response 4 ms (budget 500 ms)"
           ]
         },
         {
@@ -444,7 +507,22 @@
           ],
           "details": [
             "[ledger-001] sender lost 2000, recipient gained 0, ledger rows added 1, successes 1",
-            "[ledger-001] VIOLATION: sender and recipient amounts differ (money created or lost)"
+            "[ledger-001] VIOLATION: sender and recipient amounts differ (money created or lost)",
+            "[perf-001] slowest response 4 ms (budget 500 ms)"
+          ]
+        },
+        {
+          "test_id": "load-001",
+          "name": "Burst of 20 parallel transfers",
+          "passed": false,
+          "findings": [
+            "phantom_success"
+          ],
+          "observations": [],
+          "details": [
+            "[perf-002] 20/20 succeeded, p95 latency 69 ms (budget 500 ms)",
+            "[perf-002] sender lost 2000, recipient gained 0, ledger rows 20",
+            "[perf-002] VIOLATION: sender and recipient amounts differ under load (money created or lost)"
           ]
         }
       ],
@@ -462,7 +540,8 @@
           "findings": [],
           "observations": [],
           "details": [
-            "[ledger-001] sender lost 100000, recipient gained 100000, ledger rows added 1, successes 1"
+            "[ledger-001] sender lost 100000, recipient gained 100000, ledger rows added 1, successes 1",
+            "[perf-001] slowest response 10 ms (budget 500 ms)"
           ]
         },
         {
@@ -477,7 +556,8 @@
           ],
           "details": [
             "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
-            "[pii-001] VIOLATION: response 1 contains a 10-digit number (\u202690)"
+            "[pii-001] VIOLATION: response 1 contains a 10-digit number (\u202690)",
+            "[perf-001] slowest response 4 ms (budget 500 ms)"
           ]
         },
         {
@@ -492,7 +572,8 @@
           ],
           "details": [
             "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
-            "[pii-001] VIOLATION: response 1 contains a 10-digit number (\u202690)"
+            "[pii-001] VIOLATION: response 1 contains a 10-digit number (\u202690)",
+            "[perf-001] slowest response 5 ms (budget 500 ms)"
           ]
         },
         {
@@ -507,7 +588,8 @@
           ],
           "details": [
             "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
-            "[pii-001] VIOLATION: response 1 contains a 10-digit number (\u202690)"
+            "[pii-001] VIOLATION: response 1 contains a 10-digit number (\u202690)",
+            "[perf-001] slowest response 4 ms (budget 500 ms)"
           ]
         },
         {
@@ -522,7 +604,8 @@
           ],
           "details": [
             "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
-            "[pii-001] VIOLATION: response 1 contains a 10-digit number (\u202690)"
+            "[pii-001] VIOLATION: response 1 contains a 10-digit number (\u202690)",
+            "[perf-001] slowest response 4 ms (budget 500 ms)"
           ]
         },
         {
@@ -534,7 +617,8 @@
             "request 1: expected 422, got 400"
           ],
           "details": [
-            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[perf-001] slowest response 5 ms (budget 500 ms)"
           ]
         },
         {
@@ -545,7 +629,9 @@
           "observations": [
             "request 1: expected 422, got 404"
           ],
-          "details": []
+          "details": [
+            "[perf-001] slowest response 3 ms (budget 500 ms)"
+          ]
         },
         {
           "test_id": "tc-008",
@@ -555,7 +641,9 @@
           "observations": [
             "request 1: expected 422, got 404"
           ],
-          "details": []
+          "details": [
+            "[perf-001] slowest response 3 ms (budget 500 ms)"
+          ]
         },
         {
           "test_id": "tc-009",
@@ -566,7 +654,8 @@
           "details": [
             "[idem-001] responses identical: True",
             "[idem-001] ledger rows after 1st request: 1, after last retry: 1",
-            "[ledger-001] sender lost 10000, recipient gained 10000, ledger rows added 1, successes 2"
+            "[ledger-001] sender lost 10000, recipient gained 10000, ledger rows added 1, successes 2",
+            "[perf-001] slowest response 4 ms (budget 500 ms)"
           ]
         },
         {
@@ -578,7 +667,8 @@
           "details": [
             "[idem-001] responses identical: True",
             "[idem-001] ledger rows after 1st request: 1, after last retry: 1",
-            "[ledger-001] sender lost 5000, recipient gained 5000, ledger rows added 1, successes 3"
+            "[ledger-001] sender lost 5000, recipient gained 5000, ledger rows added 1, successes 3",
+            "[perf-001] slowest response 9 ms (budget 500 ms)"
           ]
         },
         {
@@ -588,7 +678,8 @@
           "findings": [],
           "observations": [],
           "details": [
-            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[perf-001] slowest response 6 ms (budget 500 ms)"
           ]
         },
         {
@@ -600,7 +691,19 @@
             "request 1: expected 422, got 200"
           ],
           "details": [
-            "[ledger-001] sender lost 2000, recipient gained 2000, ledger rows added 1, successes 1"
+            "[ledger-001] sender lost 2000, recipient gained 2000, ledger rows added 1, successes 1",
+            "[perf-001] slowest response 3 ms (budget 500 ms)"
+          ]
+        },
+        {
+          "test_id": "load-001",
+          "name": "Burst of 20 parallel transfers",
+          "passed": true,
+          "findings": [],
+          "observations": [],
+          "details": [
+            "[perf-002] 20/20 succeeded, p95 latency 48 ms (budget 500 ms)",
+            "[perf-002] sender lost 2000, recipient gained 2000, ledger rows 20"
           ]
         }
       ],
@@ -608,9 +711,7 @@
     },
     {
       "active_bugs": [
-        "double_charge",
-        "phantom_success",
-        "pii_leak"
+        "slow_response"
       ],
       "results": [
         {
@@ -618,12 +719,13 @@
           "name": "Transfer exact full balance of sender account",
           "passed": false,
           "findings": [
-            "phantom_success"
+            "slow_response"
           ],
           "observations": [],
           "details": [
-            "[ledger-001] sender lost 100000, recipient gained 0, ledger rows added 1, successes 1",
-            "[ledger-001] VIOLATION: sender and recipient amounts differ (money created or lost)"
+            "[ledger-001] sender lost 100000, recipient gained 100000, ledger rows added 1, successes 1",
+            "[perf-001] slowest response 811 ms (budget 500 ms)",
+            "[perf-001] VIOLATION: a response took 811 ms, over the 500 ms budget"
           ]
         },
         {
@@ -631,14 +733,15 @@
           "name": "Transfer one cent more than sender available balance",
           "passed": false,
           "findings": [
-            "pii_leak"
+            "slow_response"
           ],
           "observations": [
             "request 1: expected 422, got 400"
           ],
           "details": [
             "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
-            "[pii-001] VIOLATION: response 1 contains a 10-digit number (\u202690)"
+            "[perf-001] slowest response 813 ms (budget 500 ms)",
+            "[perf-001] VIOLATION: a response took 813 ms, over the 500 ms budget"
           ]
         },
         {
@@ -646,14 +749,15 @@
           "name": "Transfer zero amount",
           "passed": false,
           "findings": [
-            "pii_leak"
+            "slow_response"
           ],
           "observations": [
             "request 1: expected 422, got 400"
           ],
           "details": [
             "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
-            "[pii-001] VIOLATION: response 1 contains a 10-digit number (\u202690)"
+            "[perf-001] slowest response 811 ms (budget 500 ms)",
+            "[perf-001] VIOLATION: a response took 811 ms, over the 500 ms budget"
           ]
         },
         {
@@ -661,14 +765,15 @@
           "name": "Transfer negative amount to siphon money",
           "passed": false,
           "findings": [
-            "pii_leak"
+            "slow_response"
           ],
           "observations": [
             "request 1: expected 422, got 400"
           ],
           "details": [
             "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
-            "[pii-001] VIOLATION: response 1 contains a 10-digit number (\u202690)"
+            "[perf-001] slowest response 804 ms (budget 500 ms)",
+            "[perf-001] VIOLATION: a response took 804 ms, over the 500 ms budget"
           ]
         },
         {
@@ -676,63 +781,77 @@
           "name": "Transfer absurdly large amount exceeding maximum plausible balance",
           "passed": false,
           "findings": [
-            "pii_leak"
+            "slow_response"
           ],
           "observations": [
             "request 1: expected 422, got 400"
           ],
           "details": [
             "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
-            "[pii-001] VIOLATION: response 1 contains a 10-digit number (\u202690)"
+            "[perf-001] slowest response 805 ms (budget 500 ms)",
+            "[perf-001] VIOLATION: a response took 805 ms, over the 500 ms budget"
           ]
         },
         {
           "test_id": "tc-006",
           "name": "Transfer funds from account to itself",
-          "passed": true,
-          "findings": [],
+          "passed": false,
+          "findings": [
+            "slow_response"
+          ],
           "observations": [
             "request 1: expected 422, got 400"
           ],
           "details": [
-            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[perf-001] slowest response 811 ms (budget 500 ms)",
+            "[perf-001] VIOLATION: a response took 811 ms, over the 500 ms budget"
           ]
         },
         {
           "test_id": "tc-007",
           "name": "Transfer from unknown sender account",
-          "passed": true,
-          "findings": [],
+          "passed": false,
+          "findings": [
+            "slow_response"
+          ],
           "observations": [
             "request 1: expected 422, got 404"
           ],
-          "details": []
+          "details": [
+            "[perf-001] slowest response 804 ms (budget 500 ms)",
+            "[perf-001] VIOLATION: a response took 804 ms, over the 500 ms budget"
+          ]
         },
         {
           "test_id": "tc-008",
           "name": "Transfer to unknown recipient account",
-          "passed": true,
-          "findings": [],
+          "passed": false,
+          "findings": [
+            "slow_response"
+          ],
           "observations": [
             "request 1: expected 422, got 404"
           ],
-          "details": []
+          "details": [
+            "[perf-001] slowest response 809 ms (budget 500 ms)",
+            "[perf-001] VIOLATION: a response took 809 ms, over the 500 ms budget"
+          ]
         },
         {
           "test_id": "tc-009",
           "name": "Replay valid transfer twice with identical idempotency key",
           "passed": false,
           "findings": [
-            "double_charge",
-            "phantom_success"
+            "slow_response"
           ],
           "observations": [],
           "details": [
-            "[idem-001] responses identical: False",
-            "[idem-001] ledger rows after 1st request: 1, after last retry: 2",
-            "[idem-001] VIOLATION: a retry with the same key created a new ledger entry",
-            "[ledger-001] sender lost 20000, recipient gained 0, ledger rows added 2, successes 2",
-            "[ledger-001] VIOLATION: sender and recipient amounts differ (money created or lost)"
+            "[idem-001] responses identical: True",
+            "[idem-001] ledger rows after 1st request: 1, after last retry: 1",
+            "[ledger-001] sender lost 10000, recipient gained 10000, ledger rows added 1, successes 2",
+            "[perf-001] slowest response 810 ms (budget 500 ms)",
+            "[perf-001] VIOLATION: a response took 810 ms, over the 500 ms budget"
           ]
         },
         {
@@ -740,16 +859,15 @@
           "name": "Replay valid transfer three times with identical idempotency key",
           "passed": false,
           "findings": [
-            "double_charge",
-            "phantom_success"
+            "slow_response"
           ],
           "observations": [],
           "details": [
-            "[idem-001] responses identical: False",
-            "[idem-001] ledger rows after 1st request: 1, after last retry: 3",
-            "[idem-001] VIOLATION: a retry with the same key created a new ledger entry",
-            "[ledger-001] sender lost 15000, recipient gained 0, ledger rows added 3, successes 3",
-            "[ledger-001] VIOLATION: sender and recipient amounts differ (money created or lost)"
+            "[idem-001] responses identical: True",
+            "[idem-001] ledger rows after 1st request: 1, after last retry: 1",
+            "[ledger-001] sender lost 5000, recipient gained 5000, ledger rows added 1, successes 3",
+            "[perf-001] slowest response 808 ms (budget 500 ms)",
+            "[perf-001] VIOLATION: a response took 808 ms, over the 500 ms budget"
           ]
         },
         {
@@ -759,7 +877,8 @@
           "findings": [],
           "observations": [],
           "details": [
-            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[perf-001] slowest response 5 ms (budget 500 ms)"
           ]
         },
         {
@@ -767,18 +886,263 @@
           "name": "Transfer request with empty string Idempotency-Key header",
           "passed": false,
           "findings": [
-            "phantom_success"
+            "slow_response"
+          ],
+          "observations": [
+            "request 1: expected 422, got 200"
+          ],
+          "details": [
+            "[ledger-001] sender lost 2000, recipient gained 2000, ledger rows added 1, successes 1",
+            "[perf-001] slowest response 804 ms (budget 500 ms)",
+            "[perf-001] VIOLATION: a response took 804 ms, over the 500 ms budget"
+          ]
+        },
+        {
+          "test_id": "load-001",
+          "name": "Burst of 20 parallel transfers",
+          "passed": false,
+          "findings": [
+            "slow_response"
+          ],
+          "observations": [],
+          "details": [
+            "[perf-002] 20/20 succeeded, p95 latency 876 ms (budget 500 ms)",
+            "[perf-002] sender lost 2000, recipient gained 2000, ledger rows 20",
+            "[perf-002] VIOLATION: p95 latency 876 ms is over the 500 ms budget under load"
+          ]
+        }
+      ],
+      "name": "slow_response"
+    },
+    {
+      "active_bugs": [
+        "double_charge",
+        "phantom_success",
+        "pii_leak",
+        "slow_response"
+      ],
+      "results": [
+        {
+          "test_id": "tc-001",
+          "name": "Transfer exact full balance of sender account",
+          "passed": false,
+          "findings": [
+            "phantom_success",
+            "slow_response"
+          ],
+          "observations": [],
+          "details": [
+            "[ledger-001] sender lost 100000, recipient gained 0, ledger rows added 1, successes 1",
+            "[ledger-001] VIOLATION: sender and recipient amounts differ (money created or lost)",
+            "[perf-001] slowest response 810 ms (budget 500 ms)",
+            "[perf-001] VIOLATION: a response took 810 ms, over the 500 ms budget"
+          ]
+        },
+        {
+          "test_id": "tc-002",
+          "name": "Transfer one cent more than sender available balance",
+          "passed": false,
+          "findings": [
+            "pii_leak",
+            "slow_response"
+          ],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[pii-001] VIOLATION: response 1 contains a 10-digit number (\u202690)",
+            "[perf-001] slowest response 803 ms (budget 500 ms)",
+            "[perf-001] VIOLATION: a response took 803 ms, over the 500 ms budget"
+          ]
+        },
+        {
+          "test_id": "tc-003",
+          "name": "Transfer zero amount",
+          "passed": false,
+          "findings": [
+            "pii_leak",
+            "slow_response"
+          ],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[pii-001] VIOLATION: response 1 contains a 10-digit number (\u202690)",
+            "[perf-001] slowest response 809 ms (budget 500 ms)",
+            "[perf-001] VIOLATION: a response took 809 ms, over the 500 ms budget"
+          ]
+        },
+        {
+          "test_id": "tc-004",
+          "name": "Transfer negative amount to siphon money",
+          "passed": false,
+          "findings": [
+            "pii_leak",
+            "slow_response"
+          ],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[pii-001] VIOLATION: response 1 contains a 10-digit number (\u202690)",
+            "[perf-001] slowest response 808 ms (budget 500 ms)",
+            "[perf-001] VIOLATION: a response took 808 ms, over the 500 ms budget"
+          ]
+        },
+        {
+          "test_id": "tc-005",
+          "name": "Transfer absurdly large amount exceeding maximum plausible balance",
+          "passed": false,
+          "findings": [
+            "pii_leak",
+            "slow_response"
+          ],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[pii-001] VIOLATION: response 1 contains a 10-digit number (\u202690)",
+            "[perf-001] slowest response 805 ms (budget 500 ms)",
+            "[perf-001] VIOLATION: a response took 805 ms, over the 500 ms budget"
+          ]
+        },
+        {
+          "test_id": "tc-006",
+          "name": "Transfer funds from account to itself",
+          "passed": false,
+          "findings": [
+            "slow_response"
+          ],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[perf-001] slowest response 805 ms (budget 500 ms)",
+            "[perf-001] VIOLATION: a response took 805 ms, over the 500 ms budget"
+          ]
+        },
+        {
+          "test_id": "tc-007",
+          "name": "Transfer from unknown sender account",
+          "passed": false,
+          "findings": [
+            "slow_response"
+          ],
+          "observations": [
+            "request 1: expected 422, got 404"
+          ],
+          "details": [
+            "[perf-001] slowest response 811 ms (budget 500 ms)",
+            "[perf-001] VIOLATION: a response took 811 ms, over the 500 ms budget"
+          ]
+        },
+        {
+          "test_id": "tc-008",
+          "name": "Transfer to unknown recipient account",
+          "passed": false,
+          "findings": [
+            "slow_response"
+          ],
+          "observations": [
+            "request 1: expected 422, got 404"
+          ],
+          "details": [
+            "[perf-001] slowest response 810 ms (budget 500 ms)",
+            "[perf-001] VIOLATION: a response took 810 ms, over the 500 ms budget"
+          ]
+        },
+        {
+          "test_id": "tc-009",
+          "name": "Replay valid transfer twice with identical idempotency key",
+          "passed": false,
+          "findings": [
+            "double_charge",
+            "phantom_success",
+            "slow_response"
+          ],
+          "observations": [],
+          "details": [
+            "[idem-001] responses identical: False",
+            "[idem-001] ledger rows after 1st request: 1, after last retry: 2",
+            "[idem-001] VIOLATION: a retry with the same key created a new ledger entry",
+            "[ledger-001] sender lost 20000, recipient gained 0, ledger rows added 2, successes 2",
+            "[ledger-001] VIOLATION: sender and recipient amounts differ (money created or lost)",
+            "[perf-001] slowest response 829 ms (budget 500 ms)",
+            "[perf-001] VIOLATION: a response took 829 ms, over the 500 ms budget"
+          ]
+        },
+        {
+          "test_id": "tc-010",
+          "name": "Replay valid transfer three times with identical idempotency key",
+          "passed": false,
+          "findings": [
+            "double_charge",
+            "phantom_success",
+            "slow_response"
+          ],
+          "observations": [],
+          "details": [
+            "[idem-001] responses identical: False",
+            "[idem-001] ledger rows after 1st request: 1, after last retry: 3",
+            "[idem-001] VIOLATION: a retry with the same key created a new ledger entry",
+            "[ledger-001] sender lost 15000, recipient gained 0, ledger rows added 3, successes 3",
+            "[ledger-001] VIOLATION: sender and recipient amounts differ (money created or lost)",
+            "[perf-001] slowest response 813 ms (budget 500 ms)",
+            "[perf-001] VIOLATION: a response took 813 ms, over the 500 ms budget"
+          ]
+        },
+        {
+          "test_id": "tc-011",
+          "name": "Transfer request with missing Idempotency-Key header",
+          "passed": true,
+          "findings": [],
+          "observations": [],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[perf-001] slowest response 3 ms (budget 500 ms)"
+          ]
+        },
+        {
+          "test_id": "tc-012",
+          "name": "Transfer request with empty string Idempotency-Key header",
+          "passed": false,
+          "findings": [
+            "phantom_success",
+            "slow_response"
           ],
           "observations": [
             "request 1: expected 422, got 200"
           ],
           "details": [
             "[ledger-001] sender lost 2000, recipient gained 0, ledger rows added 1, successes 1",
-            "[ledger-001] VIOLATION: sender and recipient amounts differ (money created or lost)"
+            "[ledger-001] VIOLATION: sender and recipient amounts differ (money created or lost)",
+            "[perf-001] slowest response 804 ms (budget 500 ms)",
+            "[perf-001] VIOLATION: a response took 804 ms, over the 500 ms budget"
+          ]
+        },
+        {
+          "test_id": "load-001",
+          "name": "Burst of 20 parallel transfers",
+          "passed": false,
+          "findings": [
+            "phantom_success",
+            "slow_response"
+          ],
+          "observations": [],
+          "details": [
+            "[perf-002] 20/20 succeeded, p95 latency 841 ms (budget 500 ms)",
+            "[perf-002] sender lost 2000, recipient gained 0, ledger rows 20",
+            "[perf-002] VIOLATION: p95 latency 841 ms is over the 500 ms budget under load",
+            "[perf-002] VIOLATION: sender and recipient amounts differ under load (money created or lost)"
           ]
         }
       ],
-      "name": "double_charge+phantom_success+pii_leak"
+      "name": "double_charge+phantom_success+pii_leak+slow_response"
     }
   ]
 }

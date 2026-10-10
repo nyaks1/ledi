@@ -1,0 +1,127 @@
+{
+  "active_bugs": [
+    "double_charge"
+  ],
+  "results": [
+    {
+      "test_id": "tc-001",
+      "name": "Happy path transfer",
+      "passed": true,
+      "findings": [],
+      "observations": [],
+      "details": [
+        "[ledger-001] sender lost 50000, recipient gained 50000, ledger rows added 1, successes 1"
+      ]
+    },
+    {
+      "test_id": "tc-002",
+      "name": "Retry with same idempotency key",
+      "passed": false,
+      "findings": [
+        "double_charge"
+      ],
+      "observations": [],
+      "details": [
+        "[idem-001] responses identical: False",
+        "[idem-001] ledger rows after 1st request: 1, after last retry: 2",
+        "[idem-001] VIOLATION: a retry with the same key created a new ledger entry",
+        "[ledger-001] sender lost 100000, recipient gained 100000, ledger rows added 2, successes 2"
+      ]
+    },
+    {
+      "test_id": "tc-003",
+      "name": "Boundary: exact balance drain",
+      "passed": true,
+      "findings": [],
+      "observations": [],
+      "details": [
+        "[ledger-001] sender lost 100000, recipient gained 100000, ledger rows added 1, successes 1"
+      ]
+    },
+    {
+      "test_id": "tc-004",
+      "name": "Boundary: balance + 1 (insufficient funds)",
+      "passed": true,
+      "findings": [],
+      "observations": [],
+      "details": [
+        "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+      ]
+    },
+    {
+      "test_id": "tc-005",
+      "name": "Self-transfer (A to A)",
+      "passed": true,
+      "findings": [],
+      "observations": [
+        "request 1: expected 200, got 400"
+      ],
+      "details": [
+        "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+      ]
+    },
+    {
+      "test_id": "tc-006",
+      "name": "Missing idempotency key",
+      "passed": true,
+      "findings": [],
+      "observations": [],
+      "details": [
+        "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+      ]
+    },
+    {
+      "test_id": "tc-007",
+      "name": "Huge integer amount",
+      "passed": true,
+      "findings": [],
+      "observations": [],
+      "details": [
+        "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+      ]
+    },
+    {
+      "test_id": "tc-008",
+      "name": "Concurrent transfers (race condition)",
+      "passed": false,
+      "findings": [
+        "double_charge"
+      ],
+      "observations": [],
+      "details": [
+        "[idem-001] responses identical: False",
+        "[idem-001] ledger rows after 1st request: 1, after last retry: 3",
+        "[idem-001] VIOLATION: a retry with the same key created a new ledger entry",
+        "[ledger-001] sender lost 90000, recipient gained 90000, ledger rows added 3, successes 3"
+      ]
+    },
+    {
+      "test_id": "tc-009",
+      "name": "Zero amount",
+      "passed": true,
+      "findings": [],
+      "observations": [],
+      "details": [
+        "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+      ]
+    },
+    {
+      "test_id": "tc-010",
+      "name": "Negative amount",
+      "passed": true,
+      "findings": [],
+      "observations": [],
+      "details": [
+        "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+      ]
+    },
+    {
+      "test_id": "tc-011",
+      "name": "Unknown account",
+      "passed": true,
+      "findings": [],
+      "observations": [],
+      "details": []
+    }
+  ]
+}

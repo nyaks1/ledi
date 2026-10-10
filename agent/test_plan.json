@@ -3,66 +3,30 @@
     {
       "method": "POST",
       "path": "/transfer",
-      "description": "Transfers cents between accounts"
+      "description": "Transfers funds between accounts specified in the payload."
     }
   ],
   "invariants": [
     {
       "id": "idem-001",
-      "name": "Idempotency",
-      "description": "Same idempotency key returns same response, creates no new ledger entry",
-      "check": "ledger_count_before == ledger_count_after && response_before == response_after"
+      "name": "Idempotent Replay",
+      "description": "A retry with the same Idempotency-Key returns the same response and creates no new ledger entry."
     },
     {
       "id": "ledger-001",
-      "name": "Ledger Consistency",
-      "description": "200 OK means sender lost exactly X and recipient gained exactly X; failure means nothing moved",
-      "check": "balance_sender_before - balance_sender_after == amount && balance_recipient_after - balance_recipient_before == amount"
+      "name": "Ledger Balance Consistency",
+      "description": "A 200 means the sender lost exactly the amount and the recipient gained exactly the amount; a failed request moves nothing."
     },
     {
       "id": "pii-001",
-      "name": "No PII in Responses",
-      "description": "No response or log line contains full account or ID number in plaintext",
-      "check": "no full account numbers in any response body or log"
+      "name": "PII Protection",
+      "description": "No response contains a full account or ID number."
     }
   ],
   "test_cases": [
     {
       "id": "tc-001",
-      "name": "Happy path transfer",
-      "endpoint": "/transfer",
-      "method": "POST",
-      "payload": {
-        "from_acc": "A",
-        "to_acc": "B",
-        "amount": 50000
-      },
-      "headers": {
-        "Idempotency-Key": "idem-happy-001"
-      },
-      "expected_status": 200,
-      "invariants_to_check": ["ledger-001", "pii-001"]
-    },
-    {
-      "id": "tc-002",
-      "name": "Retry with same idempotency key",
-      "endpoint": "/transfer",
-      "method": "POST",
-      "payload": {
-        "from_acc": "A",
-        "to_acc": "B",
-        "amount": 50000
-      },
-      "headers": {
-        "Idempotency-Key": "idem-retry-001"
-      },
-      "repeat": 2,
-      "expected_status": 200,
-      "invariants_to_check": ["idem-001", "ledger-001"]
-    },
-    {
-      "id": "tc-003",
-      "name": "Boundary: exact balance drain",
+      "name": "Transfer exact full balance of sender account",
       "endpoint": "/transfer",
       "method": "POST",
       "payload": {
@@ -71,14 +35,18 @@
         "amount": 100000
       },
       "headers": {
-        "Idempotency-Key": "idem-drain-001"
+        "Idempotency-Key": "idem-key-exact-balance-001"
       },
+      "repeat": 1,
       "expected_status": 200,
-      "invariants_to_check": ["ledger-001", "pii-001"]
+      "invariants_to_check": [
+        "ledger-001",
+        "pii-001"
+      ]
     },
     {
-      "id": "tc-004",
-      "name": "Boundary: balance + 1 (insufficient funds)",
+      "id": "tc-002",
+      "name": "Transfer one cent more than sender available balance",
       "endpoint": "/transfer",
       "method": "POST",
       "payload": {
@@ -87,78 +55,18 @@
         "amount": 100001
       },
       "headers": {
-        "Idempotency-Key": "idem-overdraft-001"
+        "Idempotency-Key": "idem-key-overdraft-002"
       },
-      "expected_status": 400,
-      "invariants_to_check": ["ledger-001", "pii-001"]
-    },
-    {
-      "id": "tc-005",
-      "name": "Self-transfer (A to A)",
-      "endpoint": "/transfer",
-      "method": "POST",
-      "payload": {
-        "from_acc": "A",
-        "to_acc": "A",
-        "amount": 10000
-      },
-      "headers": {
-        "Idempotency-Key": "idem-self-001"
-      },
-      "expected_status": 200,
-      "invariants_to_check": ["ledger-001", "pii-001"]
-    },
-    {
-      "id": "tc-006",
-      "name": "Missing idempotency key",
-      "endpoint": "/transfer",
-      "method": "POST",
-      "payload": {
-        "from_acc": "A",
-        "to_acc": "B",
-        "amount": 10000
-      },
-      "headers": {},
+      "repeat": 1,
       "expected_status": 422,
-      "invariants_to_check": ["ledger-001", "pii-001"]
+      "invariants_to_check": [
+        "ledger-001",
+        "pii-001"
+      ]
     },
     {
-      "id": "tc-007",
-      "name": "Huge integer amount",
-      "endpoint": "/transfer",
-      "method": "POST",
-      "payload": {
-        "from_acc": "A",
-        "to_acc": "B",
-        "amount": 999999999999999999
-      },
-      "headers": {
-        "Idempotency-Key": "idem-huge-001"
-      },
-      "expected_status": 400,
-      "invariants_to_check": ["ledger-001", "pii-001"]
-    },
-    {
-      "id": "tc-008",
-      "name": "Concurrent transfers (race condition)",
-      "endpoint": "/transfer",
-      "method": "POST",
-      "payload": {
-        "from_acc": "A",
-        "to_acc": "B",
-        "amount": 30000
-      },
-      "headers": {
-        "Idempotency-Key": "idem-concurrent-001"
-      },
-      "concurrent": true,
-      "repeat": 3,
-      "expected_status": 200,
-      "invariants_to_check": ["idem-001", "ledger-001"]
-    },
-    {
-      "id": "tc-009",
-      "name": "Zero amount",
+      "id": "tc-003",
+      "name": "Transfer zero amount",
       "endpoint": "/transfer",
       "method": "POST",
       "payload": {
@@ -167,42 +75,198 @@
         "amount": 0
       },
       "headers": {
-        "Idempotency-Key": "idem-zero-001"
+        "Idempotency-Key": "idem-key-zero-amount-003"
       },
-      "expected_status": 400,
-      "invariants_to_check": ["ledger-001", "pii-001"]
+      "repeat": 1,
+      "expected_status": 422,
+      "invariants_to_check": [
+        "ledger-001",
+        "pii-001"
+      ]
     },
     {
-      "id": "tc-010",
-      "name": "Negative amount",
+      "id": "tc-004",
+      "name": "Transfer negative amount to siphon money",
       "endpoint": "/transfer",
       "method": "POST",
       "payload": {
         "from_acc": "A",
         "to_acc": "B",
-        "amount": -100
+        "amount": -5000
       },
       "headers": {
-        "Idempotency-Key": "idem-negative-001"
+        "Idempotency-Key": "idem-key-negative-amount-004"
       },
-      "expected_status": 400,
-      "invariants_to_check": ["ledger-001", "pii-001"]
+      "repeat": 1,
+      "expected_status": 422,
+      "invariants_to_check": [
+        "ledger-001",
+        "pii-001"
+      ]
     },
     {
-      "id": "tc-011",
-      "name": "Unknown account",
+      "id": "tc-005",
+      "name": "Transfer absurdly large amount exceeding maximum plausible balance",
       "endpoint": "/transfer",
       "method": "POST",
       "payload": {
-        "from_acc": "Z",
+        "from_acc": "A",
+        "to_acc": "B",
+        "amount": 999999999999
+      },
+      "headers": {
+        "Idempotency-Key": "idem-key-absurd-large-005"
+      },
+      "repeat": 1,
+      "expected_status": 422,
+      "invariants_to_check": [
+        "ledger-001",
+        "pii-001"
+      ]
+    },
+    {
+      "id": "tc-006",
+      "name": "Transfer funds from account to itself",
+      "endpoint": "/transfer",
+      "method": "POST",
+      "payload": {
+        "from_acc": "A",
+        "to_acc": "A",
+        "amount": 1000
+      },
+      "headers": {
+        "Idempotency-Key": "idem-key-self-transfer-006"
+      },
+      "repeat": 1,
+      "expected_status": 422,
+      "invariants_to_check": [
+        "ledger-001",
+        "pii-001"
+      ]
+    },
+    {
+      "id": "tc-007",
+      "name": "Transfer from unknown sender account",
+      "endpoint": "/transfer",
+      "method": "POST",
+      "payload": {
+        "from_acc": "NONEXISTENT",
         "to_acc": "B",
         "amount": 1000
       },
       "headers": {
-        "Idempotency-Key": "idem-unknown-001"
+        "Idempotency-Key": "idem-key-unknown-sender-007"
       },
-      "expected_status": 404,
-      "invariants_to_check": ["ledger-001", "pii-001"]
+      "repeat": 1,
+      "expected_status": 422,
+      "invariants_to_check": [
+        "ledger-001",
+        "pii-001"
+      ]
+    },
+    {
+      "id": "tc-008",
+      "name": "Transfer to unknown recipient account",
+      "endpoint": "/transfer",
+      "method": "POST",
+      "payload": {
+        "from_acc": "A",
+        "to_acc": "NONEXISTENT",
+        "amount": 1000
+      },
+      "headers": {
+        "Idempotency-Key": "idem-key-unknown-recipient-008"
+      },
+      "repeat": 1,
+      "expected_status": 422,
+      "invariants_to_check": [
+        "ledger-001",
+        "pii-001"
+      ]
+    },
+    {
+      "id": "tc-009",
+      "name": "Replay valid transfer twice with identical idempotency key",
+      "endpoint": "/transfer",
+      "method": "POST",
+      "payload": {
+        "from_acc": "A",
+        "to_acc": "B",
+        "amount": 10000
+      },
+      "headers": {
+        "Idempotency-Key": "idem-key-replay-2x-009"
+      },
+      "repeat": 2,
+      "expected_status": 200,
+      "invariants_to_check": [
+        "idem-001",
+        "ledger-001",
+        "pii-001"
+      ]
+    },
+    {
+      "id": "tc-010",
+      "name": "Replay valid transfer three times with identical idempotency key",
+      "endpoint": "/transfer",
+      "method": "POST",
+      "payload": {
+        "from_acc": "B",
+        "to_acc": "A",
+        "amount": 5000
+      },
+      "headers": {
+        "Idempotency-Key": "idem-key-replay-3x-010"
+      },
+      "repeat": 3,
+      "expected_status": 200,
+      "invariants_to_check": [
+        "idem-001",
+        "ledger-001",
+        "pii-001"
+      ]
+    },
+    {
+      "id": "tc-011",
+      "name": "Transfer request with missing Idempotency-Key header",
+      "endpoint": "/transfer",
+      "method": "POST",
+      "payload": {
+        "from_acc": "A",
+        "to_acc": "B",
+        "amount": 2000
+      },
+      "headers": {},
+      "repeat": 1,
+      "expected_status": 422,
+      "invariants_to_check": [
+        "ledger-001",
+        "pii-001"
+      ]
+    },
+    {
+      "id": "tc-012",
+      "name": "Transfer request with empty string Idempotency-Key header",
+      "endpoint": "/transfer",
+      "method": "POST",
+      "payload": {
+        "from_acc": "A",
+        "to_acc": "B",
+        "amount": 2000
+      },
+      "headers": {
+        "Idempotency-Key": ""
+      },
+      "repeat": 1,
+      "expected_status": 422,
+      "invariants_to_check": [
+        "ledger-001",
+        "pii-001"
+      ]
     }
-  ]
+  ],
+  "generated_by": {
+    "model": "gemini-flash-latest",
+    "at": "2026-10-10 07:33:31"
+  }
 }

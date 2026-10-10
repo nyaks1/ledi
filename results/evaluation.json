@@ -1,0 +1,784 @@
+{
+  "generated": "2026-10-10 07:37:27",
+  "n_cases": 12,
+  "scenarios": [
+    {
+      "active_bugs": [],
+      "results": [
+        {
+          "test_id": "tc-001",
+          "name": "Transfer exact full balance of sender account",
+          "passed": true,
+          "findings": [],
+          "observations": [],
+          "details": [
+            "[ledger-001] sender lost 100000, recipient gained 100000, ledger rows added 1, successes 1"
+          ]
+        },
+        {
+          "test_id": "tc-002",
+          "name": "Transfer one cent more than sender available balance",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+          ]
+        },
+        {
+          "test_id": "tc-003",
+          "name": "Transfer zero amount",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+          ]
+        },
+        {
+          "test_id": "tc-004",
+          "name": "Transfer negative amount to siphon money",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+          ]
+        },
+        {
+          "test_id": "tc-005",
+          "name": "Transfer absurdly large amount exceeding maximum plausible balance",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+          ]
+        },
+        {
+          "test_id": "tc-006",
+          "name": "Transfer funds from account to itself",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+          ]
+        },
+        {
+          "test_id": "tc-007",
+          "name": "Transfer from unknown sender account",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 404"
+          ],
+          "details": []
+        },
+        {
+          "test_id": "tc-008",
+          "name": "Transfer to unknown recipient account",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 404"
+          ],
+          "details": []
+        },
+        {
+          "test_id": "tc-009",
+          "name": "Replay valid transfer twice with identical idempotency key",
+          "passed": true,
+          "findings": [],
+          "observations": [],
+          "details": [
+            "[idem-001] responses identical: True",
+            "[idem-001] ledger rows after 1st request: 1, after last retry: 1",
+            "[ledger-001] sender lost 10000, recipient gained 10000, ledger rows added 1, successes 2"
+          ]
+        },
+        {
+          "test_id": "tc-010",
+          "name": "Replay valid transfer three times with identical idempotency key",
+          "passed": true,
+          "findings": [],
+          "observations": [],
+          "details": [
+            "[idem-001] responses identical: True",
+            "[idem-001] ledger rows after 1st request: 1, after last retry: 1",
+            "[ledger-001] sender lost 5000, recipient gained 5000, ledger rows added 1, successes 3"
+          ]
+        },
+        {
+          "test_id": "tc-011",
+          "name": "Transfer request with missing Idempotency-Key header",
+          "passed": true,
+          "findings": [],
+          "observations": [],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+          ]
+        },
+        {
+          "test_id": "tc-012",
+          "name": "Transfer request with empty string Idempotency-Key header",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 200"
+          ],
+          "details": [
+            "[ledger-001] sender lost 2000, recipient gained 2000, ledger rows added 1, successes 1"
+          ]
+        }
+      ],
+      "name": "clean (no bugs)"
+    },
+    {
+      "active_bugs": [
+        "double_charge"
+      ],
+      "results": [
+        {
+          "test_id": "tc-001",
+          "name": "Transfer exact full balance of sender account",
+          "passed": true,
+          "findings": [],
+          "observations": [],
+          "details": [
+            "[ledger-001] sender lost 100000, recipient gained 100000, ledger rows added 1, successes 1"
+          ]
+        },
+        {
+          "test_id": "tc-002",
+          "name": "Transfer one cent more than sender available balance",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+          ]
+        },
+        {
+          "test_id": "tc-003",
+          "name": "Transfer zero amount",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+          ]
+        },
+        {
+          "test_id": "tc-004",
+          "name": "Transfer negative amount to siphon money",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+          ]
+        },
+        {
+          "test_id": "tc-005",
+          "name": "Transfer absurdly large amount exceeding maximum plausible balance",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+          ]
+        },
+        {
+          "test_id": "tc-006",
+          "name": "Transfer funds from account to itself",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+          ]
+        },
+        {
+          "test_id": "tc-007",
+          "name": "Transfer from unknown sender account",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 404"
+          ],
+          "details": []
+        },
+        {
+          "test_id": "tc-008",
+          "name": "Transfer to unknown recipient account",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 404"
+          ],
+          "details": []
+        },
+        {
+          "test_id": "tc-009",
+          "name": "Replay valid transfer twice with identical idempotency key",
+          "passed": false,
+          "findings": [
+            "double_charge"
+          ],
+          "observations": [],
+          "details": [
+            "[idem-001] responses identical: False",
+            "[idem-001] ledger rows after 1st request: 1, after last retry: 2",
+            "[idem-001] VIOLATION: a retry with the same key created a new ledger entry",
+            "[ledger-001] sender lost 20000, recipient gained 20000, ledger rows added 2, successes 2"
+          ]
+        },
+        {
+          "test_id": "tc-010",
+          "name": "Replay valid transfer three times with identical idempotency key",
+          "passed": false,
+          "findings": [
+            "double_charge"
+          ],
+          "observations": [],
+          "details": [
+            "[idem-001] responses identical: False",
+            "[idem-001] ledger rows after 1st request: 1, after last retry: 3",
+            "[idem-001] VIOLATION: a retry with the same key created a new ledger entry",
+            "[ledger-001] sender lost 15000, recipient gained 15000, ledger rows added 3, successes 3"
+          ]
+        },
+        {
+          "test_id": "tc-011",
+          "name": "Transfer request with missing Idempotency-Key header",
+          "passed": true,
+          "findings": [],
+          "observations": [],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+          ]
+        },
+        {
+          "test_id": "tc-012",
+          "name": "Transfer request with empty string Idempotency-Key header",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 200"
+          ],
+          "details": [
+            "[ledger-001] sender lost 2000, recipient gained 2000, ledger rows added 1, successes 1"
+          ]
+        }
+      ],
+      "name": "double_charge"
+    },
+    {
+      "active_bugs": [
+        "phantom_success"
+      ],
+      "results": [
+        {
+          "test_id": "tc-001",
+          "name": "Transfer exact full balance of sender account",
+          "passed": false,
+          "findings": [
+            "phantom_success"
+          ],
+          "observations": [],
+          "details": [
+            "[ledger-001] sender lost 100000, recipient gained 0, ledger rows added 1, successes 1",
+            "[ledger-001] VIOLATION: sender and recipient amounts differ (money created or lost)"
+          ]
+        },
+        {
+          "test_id": "tc-002",
+          "name": "Transfer one cent more than sender available balance",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+          ]
+        },
+        {
+          "test_id": "tc-003",
+          "name": "Transfer zero amount",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+          ]
+        },
+        {
+          "test_id": "tc-004",
+          "name": "Transfer negative amount to siphon money",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+          ]
+        },
+        {
+          "test_id": "tc-005",
+          "name": "Transfer absurdly large amount exceeding maximum plausible balance",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+          ]
+        },
+        {
+          "test_id": "tc-006",
+          "name": "Transfer funds from account to itself",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+          ]
+        },
+        {
+          "test_id": "tc-007",
+          "name": "Transfer from unknown sender account",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 404"
+          ],
+          "details": []
+        },
+        {
+          "test_id": "tc-008",
+          "name": "Transfer to unknown recipient account",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 404"
+          ],
+          "details": []
+        },
+        {
+          "test_id": "tc-009",
+          "name": "Replay valid transfer twice with identical idempotency key",
+          "passed": false,
+          "findings": [
+            "phantom_success"
+          ],
+          "observations": [],
+          "details": [
+            "[idem-001] responses identical: True",
+            "[idem-001] ledger rows after 1st request: 1, after last retry: 1",
+            "[ledger-001] sender lost 10000, recipient gained 0, ledger rows added 1, successes 2",
+            "[ledger-001] VIOLATION: sender and recipient amounts differ (money created or lost)"
+          ]
+        },
+        {
+          "test_id": "tc-010",
+          "name": "Replay valid transfer three times with identical idempotency key",
+          "passed": false,
+          "findings": [
+            "phantom_success"
+          ],
+          "observations": [],
+          "details": [
+            "[idem-001] responses identical: True",
+            "[idem-001] ledger rows after 1st request: 1, after last retry: 1",
+            "[ledger-001] sender lost 5000, recipient gained 0, ledger rows added 1, successes 3",
+            "[ledger-001] VIOLATION: sender and recipient amounts differ (money created or lost)"
+          ]
+        },
+        {
+          "test_id": "tc-011",
+          "name": "Transfer request with missing Idempotency-Key header",
+          "passed": true,
+          "findings": [],
+          "observations": [],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+          ]
+        },
+        {
+          "test_id": "tc-012",
+          "name": "Transfer request with empty string Idempotency-Key header",
+          "passed": false,
+          "findings": [
+            "phantom_success"
+          ],
+          "observations": [
+            "request 1: expected 422, got 200"
+          ],
+          "details": [
+            "[ledger-001] sender lost 2000, recipient gained 0, ledger rows added 1, successes 1",
+            "[ledger-001] VIOLATION: sender and recipient amounts differ (money created or lost)"
+          ]
+        }
+      ],
+      "name": "phantom_success"
+    },
+    {
+      "active_bugs": [
+        "pii_leak"
+      ],
+      "results": [
+        {
+          "test_id": "tc-001",
+          "name": "Transfer exact full balance of sender account",
+          "passed": true,
+          "findings": [],
+          "observations": [],
+          "details": [
+            "[ledger-001] sender lost 100000, recipient gained 100000, ledger rows added 1, successes 1"
+          ]
+        },
+        {
+          "test_id": "tc-002",
+          "name": "Transfer one cent more than sender available balance",
+          "passed": false,
+          "findings": [
+            "pii_leak"
+          ],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[pii-001] VIOLATION: response 1 contains a 10-digit number (\u202690)"
+          ]
+        },
+        {
+          "test_id": "tc-003",
+          "name": "Transfer zero amount",
+          "passed": false,
+          "findings": [
+            "pii_leak"
+          ],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[pii-001] VIOLATION: response 1 contains a 10-digit number (\u202690)"
+          ]
+        },
+        {
+          "test_id": "tc-004",
+          "name": "Transfer negative amount to siphon money",
+          "passed": false,
+          "findings": [
+            "pii_leak"
+          ],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[pii-001] VIOLATION: response 1 contains a 10-digit number (\u202690)"
+          ]
+        },
+        {
+          "test_id": "tc-005",
+          "name": "Transfer absurdly large amount exceeding maximum plausible balance",
+          "passed": false,
+          "findings": [
+            "pii_leak"
+          ],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[pii-001] VIOLATION: response 1 contains a 10-digit number (\u202690)"
+          ]
+        },
+        {
+          "test_id": "tc-006",
+          "name": "Transfer funds from account to itself",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+          ]
+        },
+        {
+          "test_id": "tc-007",
+          "name": "Transfer from unknown sender account",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 404"
+          ],
+          "details": []
+        },
+        {
+          "test_id": "tc-008",
+          "name": "Transfer to unknown recipient account",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 404"
+          ],
+          "details": []
+        },
+        {
+          "test_id": "tc-009",
+          "name": "Replay valid transfer twice with identical idempotency key",
+          "passed": true,
+          "findings": [],
+          "observations": [],
+          "details": [
+            "[idem-001] responses identical: True",
+            "[idem-001] ledger rows after 1st request: 1, after last retry: 1",
+            "[ledger-001] sender lost 10000, recipient gained 10000, ledger rows added 1, successes 2"
+          ]
+        },
+        {
+          "test_id": "tc-010",
+          "name": "Replay valid transfer three times with identical idempotency key",
+          "passed": true,
+          "findings": [],
+          "observations": [],
+          "details": [
+            "[idem-001] responses identical: True",
+            "[idem-001] ledger rows after 1st request: 1, after last retry: 1",
+            "[ledger-001] sender lost 5000, recipient gained 5000, ledger rows added 1, successes 3"
+          ]
+        },
+        {
+          "test_id": "tc-011",
+          "name": "Transfer request with missing Idempotency-Key header",
+          "passed": true,
+          "findings": [],
+          "observations": [],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+          ]
+        },
+        {
+          "test_id": "tc-012",
+          "name": "Transfer request with empty string Idempotency-Key header",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 200"
+          ],
+          "details": [
+            "[ledger-001] sender lost 2000, recipient gained 2000, ledger rows added 1, successes 1"
+          ]
+        }
+      ],
+      "name": "pii_leak"
+    },
+    {
+      "active_bugs": [
+        "double_charge",
+        "phantom_success",
+        "pii_leak"
+      ],
+      "results": [
+        {
+          "test_id": "tc-001",
+          "name": "Transfer exact full balance of sender account",
+          "passed": false,
+          "findings": [
+            "phantom_success"
+          ],
+          "observations": [],
+          "details": [
+            "[ledger-001] sender lost 100000, recipient gained 0, ledger rows added 1, successes 1",
+            "[ledger-001] VIOLATION: sender and recipient amounts differ (money created or lost)"
+          ]
+        },
+        {
+          "test_id": "tc-002",
+          "name": "Transfer one cent more than sender available balance",
+          "passed": false,
+          "findings": [
+            "pii_leak"
+          ],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[pii-001] VIOLATION: response 1 contains a 10-digit number (\u202690)"
+          ]
+        },
+        {
+          "test_id": "tc-003",
+          "name": "Transfer zero amount",
+          "passed": false,
+          "findings": [
+            "pii_leak"
+          ],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[pii-001] VIOLATION: response 1 contains a 10-digit number (\u202690)"
+          ]
+        },
+        {
+          "test_id": "tc-004",
+          "name": "Transfer negative amount to siphon money",
+          "passed": false,
+          "findings": [
+            "pii_leak"
+          ],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[pii-001] VIOLATION: response 1 contains a 10-digit number (\u202690)"
+          ]
+        },
+        {
+          "test_id": "tc-005",
+          "name": "Transfer absurdly large amount exceeding maximum plausible balance",
+          "passed": false,
+          "findings": [
+            "pii_leak"
+          ],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0",
+            "[pii-001] VIOLATION: response 1 contains a 10-digit number (\u202690)"
+          ]
+        },
+        {
+          "test_id": "tc-006",
+          "name": "Transfer funds from account to itself",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 400"
+          ],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+          ]
+        },
+        {
+          "test_id": "tc-007",
+          "name": "Transfer from unknown sender account",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 404"
+          ],
+          "details": []
+        },
+        {
+          "test_id": "tc-008",
+          "name": "Transfer to unknown recipient account",
+          "passed": true,
+          "findings": [],
+          "observations": [
+            "request 1: expected 422, got 404"
+          ],
+          "details": []
+        },
+        {
+          "test_id": "tc-009",
+          "name": "Replay valid transfer twice with identical idempotency key",
+          "passed": false,
+          "findings": [
+            "double_charge",
+            "phantom_success"
+          ],
+          "observations": [],
+          "details": [
+            "[idem-001] responses identical: False",
+            "[idem-001] ledger rows after 1st request: 1, after last retry: 2",
+            "[idem-001] VIOLATION: a retry with the same key created a new ledger entry",
+            "[ledger-001] sender lost 20000, recipient gained 0, ledger rows added 2, successes 2",
+            "[ledger-001] VIOLATION: sender and recipient amounts differ (money created or lost)"
+          ]
+        },
+        {
+          "test_id": "tc-010",
+          "name": "Replay valid transfer three times with identical idempotency key",
+          "passed": false,
+          "findings": [
+            "double_charge",
+            "phantom_success"
+          ],
+          "observations": [],
+          "details": [
+            "[idem-001] responses identical: False",
+            "[idem-001] ledger rows after 1st request: 1, after last retry: 3",
+            "[idem-001] VIOLATION: a retry with the same key created a new ledger entry",
+            "[ledger-001] sender lost 15000, recipient gained 0, ledger rows added 3, successes 3",
+            "[ledger-001] VIOLATION: sender and recipient amounts differ (money created or lost)"
+          ]
+        },
+        {
+          "test_id": "tc-011",
+          "name": "Transfer request with missing Idempotency-Key header",
+          "passed": true,
+          "findings": [],
+          "observations": [],
+          "details": [
+            "[ledger-001] sender lost 0, recipient gained 0, ledger rows added 0, successes 0"
+          ]
+        },
+        {
+          "test_id": "tc-012",
+          "name": "Transfer request with empty string Idempotency-Key header",
+          "passed": false,
+          "findings": [
+            "phantom_success"
+          ],
+          "observations": [
+            "request 1: expected 422, got 200"
+          ],
+          "details": [
+            "[ledger-001] sender lost 2000, recipient gained 0, ledger rows added 1, successes 1",
+            "[ledger-001] VIOLATION: sender and recipient amounts differ (money created or lost)"
+          ]
+        }
+      ],
+      "name": "double_charge+phantom_success+pii_leak"
+    }
+  ]
+}

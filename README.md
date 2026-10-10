@@ -1,10 +1,10 @@
-# Ledi
+# Sebaka
 
 An AI agent that tests money-moving APIs. It reads an OpenAPI spec, invents
 attacks a human tester might not write, fires them, and judges the result by
 **reading the ledger and balances, never by trusting "200 OK"**.
 
-Built for the Ledi AI Agent Challenge (Software Quality Engineering, API testing).
+Built for the Sebaka AI Agent Challenge 2026 (Software Quality Engineering, API testing).
 
 ## Problem
 

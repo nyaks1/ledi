@@ -29,7 +29,8 @@ SCENARIOS = [
     ["double_charge"],
     ["phantom_success"],
     ["pii_leak"],
-    ["double_charge", "phantom_success", "pii_leak"],
+    ["slow_response"],
+    ["double_charge", "phantom_success", "pii_leak", "slow_response"],
 ]
 
 

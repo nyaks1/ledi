@@ -1,142 +1,327 @@
 """
-Runner: deterministic test executor for three pillars.
-- Functional: idempotency, balance conservation
-- Performance: latency SLA
-- Security: error leakage (PII/infrastructure)
+Runner: deterministic test executor (no LLM calls).
+
+Fires each test case against the bank, then decides pass/fail by READING THE
+LEDGER AND BALANCES, never by trusting the HTTP status. Each violation is
+labelled with a bug signature derived from *how* the rule broke:
+
+  idem-001   ledger grew on a retry              -> "double_charge"
+  ledger-001 sender and recipient deltas differ  -> "phantom_success"
+  pii-001    long digit run in a response body   -> "pii_leak"
+  perf-001   a response slower than the budget   -> "slow_response"
+  perf-002   burst of parallel transfers: p95 over budget, or money not
+             conserved under load                -> "slow_response" / ledger signatures
+
+The runner never reads which bugs are planted. Only report/evaluate do.
 """
+import json
+import re
 import time
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field
+from pathlib import Path
+
 import requests
-from typing import Tuple
 
 BASE_URL = "http://127.0.0.1:8000"
+LONG_DIGITS = re.compile(r"\d{8,}")  # account / ID / phone-like numbers
+LATENCY_BUDGET_MS = 500   # one transfer should answer within this
+BURST_SIZE = 20           # parallel transfers in the load check
+BURST_WORKERS = 10
 
-# ---------- Helper functions ----------
+
+@dataclass
+class TestResult:
+    test_id: str
+    name: str
+    findings: list = field(default_factory=list)      # bug signatures (violations)
+    observations: list = field(default_factory=list)  # needs human triage
+    details: list = field(default_factory=list)
+
+    @property
+    def passed(self) -> bool:
+        return not self.findings
+
+    def to_dict(self) -> dict:
+        return {
+            "test_id": self.test_id,
+            "name": self.name,
+            "passed": self.passed,
+            "findings": sorted(set(self.findings)),
+            "observations": self.observations,
+            "details": self.details,
+        }
+
+
+# ---------- bank access (truth endpoints) ----------
+
 def get_balance(acc: str) -> int:
     r = requests.get(f"{BASE_URL}/accounts/{acc}", timeout=5)
     r.raise_for_status()
     return r.json()["balance"]
+
 
 def get_ledger() -> list:
     r = requests.get(f"{BASE_URL}/ledger", timeout=5)
     r.raise_for_status()
     return r.json()
 
+
 def reset_bank() -> None:
     requests.post(f"{BASE_URL}/_test/reset", timeout=5).raise_for_status()
+
 
 def get_active_bugs() -> list:
     r = requests.get(f"{BASE_URL}/_test/config", timeout=5)
     r.raise_for_status()
-    return r.json().get("active_bugs", [])
+    return r.json()["active_bugs"]
+
 
 def make_transfer(payload: dict, headers: dict) -> requests.Response:
-    return requests.post(f"{BASE_URL}/transfer", json=payload, headers=headers, timeout=10)
+    return requests.post(f"{BASE_URL}/transfer", json=payload, headers=headers, timeout=15)
 
 
-# ---------- Pillar 1: Functional Tests ----------
-def test_idempotency_retry() -> Tuple[bool, str]:
-    """Pillar 1: Functional - Replay with same key must not double debit."""
-    h = {"Idempotency-Key": f"retry-{time.time()}"}
-    body = {"from_acc": "A", "to_acc": "B", "amount": 10_000}
+def timed_transfer(payload: dict, headers: dict):
+    """Returns (response, elapsed_ms)."""
+    start = time.perf_counter()
+    resp = make_transfer(payload, headers)
+    return resp, (time.perf_counter() - start) * 1000
+
+
+def safe_json(resp: requests.Response):
+    try:
+        return resp.json()
+    except ValueError:
+        return resp.text
+
+
+# ---------- invariant checks ----------
+# Each returns (violation_signatures, detail_lines).
+
+def check_idempotency(responses, ledger_snapshots):
+    """Same key = same response and no new ledger entry on retry."""
+    if len(responses) < 2:
+        return [], ["only one request, idempotency check n/a"]
+    sigs, details = [], []
+    same = safe_json(responses[0]) == safe_json(responses[1])
+    grew = len(ledger_snapshots[-1]) > len(ledger_snapshots[0])
+    details.append(f"responses identical: {same}")
+    details.append(
+        f"ledger rows after 1st request: {len(ledger_snapshots[0])}, "
+        f"after last retry: {len(ledger_snapshots[-1])}"
+    )
+    if grew:
+        sigs.append("double_charge")
+        details.append("VIOLATION: a retry with the same key created a new ledger entry")
+    elif not same:
+        sigs.append("unclassified")
+        details.append("VIOLATION: retry returned a different response")
+    return sigs, details
+
+
+def check_ledger(payload, responses, repeat, before, after, rows_added):
+    """200 => money moved consistently; failure => nothing moved."""
+    sigs, details = [], []
+    f, t, amount = payload["from_acc"], payload["to_acc"], payload["amount"]
+    ok_count = sum(1 for r in responses if r.status_code == 200)
+
+    if before is None:  # account not tracked (e.g. unknown account "Z")
+        if ok_count == 0 and rows_added > 0:
+            sigs.append("unclassified")
+            details.append("VIOLATION: ledger grew although every request failed")
+        return sigs, details
+
+    sender_delta = before[f] - after[f]
+    recipient_delta = after[t] - before[t]
+    details.append(
+        f"sender lost {sender_delta}, recipient gained {recipient_delta}, "
+        f"ledger rows added {rows_added}, successes {ok_count}"
+    )
+
+    if ok_count == 0:
+        if sender_delta != 0 or recipient_delta != 0 or rows_added != 0:
+            sigs.append("unclassified")
+            details.append("VIOLATION: money or ledger changed on a failed request")
+        return sigs, details
+
+    if sender_delta != recipient_delta:
+        sigs.append("phantom_success")
+        details.append("VIOLATION: sender and recipient amounts differ (money created or lost)")
+    elif repeat == 1 and sender_delta != amount:
+        sigs.append("unclassified")
+        details.append(f"VIOLATION: expected exactly {amount} to move")
+    if rows_added < 1:
+        sigs.append("unclassified")
+        details.append("VIOLATION: 200 OK but no ledger entry")
+    return sigs, details
+
+
+def check_pii(payload, headers, responses):
+    """No long digit runs (account/ID-like) in any response we did not send ourselves."""
+    sent = json.dumps(payload) + json.dumps(headers)
+    sigs, details = [], []
+    for i, r in enumerate(responses):
+        for m in LONG_DIGITS.findall(r.text):
+            if m in sent:
+                continue  # echo of our own input, not a leak
+            sigs.append("pii_leak")
+            details.append(
+                f"VIOLATION: response {i + 1} contains a {len(m)}-digit number (…{m[-2:]})"
+            )
+    return sigs, details
+
+
+def check_latency(latencies_ms):
+    """perf-001: every response inside the latency budget."""
+    worst = max(latencies_ms)
+    details = [f"slowest response {worst:.0f} ms (budget {LATENCY_BUDGET_MS} ms)"]
+    if worst > LATENCY_BUDGET_MS:
+        details.append(f"VIOLATION: a response took {worst:.0f} ms, over the {LATENCY_BUDGET_MS} ms budget")
+        return ["slow_response"], details
+    return [], details
+
+
+# ---------- load check (performance) ----------
+
+def run_load_check(verbose: bool = True) -> TestResult:
+    """perf-002: fire BURST_SIZE different transfers at once, then check latency and money."""
+    res = TestResult("load-001", f"Burst of {BURST_SIZE} parallel transfers")
     reset_bank()
-    requests.post(f"{BASE_URL}/transfer", json=body, headers=h)
-    requests.post(f"{BASE_URL}/transfer", json=body, headers=h)
+    before = {a: get_balance(a) for a in ("A", "B")}
+    amount = 100  # cents
 
-    ledger = get_ledger()
-    entries = [row for row in ledger if row["from"] == "A" and row["amount"] == 10_000]
-    if len(entries) > 1:
-        return False, "VIOLATION [double_charge]: Retried transfer created duplicate ledger records."
-    return True, "Passed: Idempotent replay recorded once."
+    def one(i):
+        payload = {"from_acc": "A", "to_acc": "B", "amount": amount}
+        return timed_transfer(payload, {"Idempotency-Key": f"burst-{i}"})
 
-def test_balance_conservation() -> Tuple[bool, str]:
-    """Pillar 1: Functional - Total balance before must equal total balance after."""
-    h = {"Idempotency-Key": f"cons-{time.time()}"}
-    reset_bank()
-    b1_a = get_balance("A")
-    b1_b = get_balance("B")
+    with ThreadPoolExecutor(max_workers=BURST_WORKERS) as pool:
+        out = list(pool.map(one, range(BURST_SIZE)))
 
-    requests.post(f"{BASE_URL}/transfer", json={"from_acc": "A", "to_acc": "B", "amount": 5_000}, headers=h)
+    latencies = sorted(ms for _, ms in out)
+    p95 = latencies[int(len(latencies) * 0.95) - 1]
+    ok = sum(1 for r, _ in out if r.status_code == 200)
+    after = {a: get_balance(a) for a in ("A", "B")}
+    sender_delta = before["A"] - after["A"]
+    recipient_delta = after["B"] - before["B"]
+    rows = len(get_ledger())
 
-    b2_a = get_balance("A")
-    b2_b = get_balance("B")
-
-    if (b1_a + b1_b) != (b2_a + b2_b):
-        return False, "VIOLATION [phantom_success]: Balance destroyed; funds debited without crediting recipient."
-    return True, "Passed: Balance strictly conserved."
-
-def test_unknown_account_error() -> Tuple[bool, str]:
-    """Pillar 1: Functional - Unknown account returns 404 without side effects."""
-    h = {"Idempotency-Key": f"unknown-{time.time()}"}
-    body = {"from_acc": "Z", "to_acc": "B", "amount": 1_000}
-    reset_bank()
-    before = get_balance("A")
-    requests.post(f"{BASE_URL}/transfer", json=body, headers=h)
-    after = get_balance("A")
-    if after != before:
-        return False, "VIOLATION: Unknown account request modified balances."
-    return True, "Passed: Unknown account rejected safely."
-
-
-# ---------- Pillar 2: Performance Tests ----------
-def test_performance_sla(sla_ms: int = 400) -> Tuple[bool, str]:
-    """Pillar 2: Performance - Latency SLA check."""
-    h = {"Idempotency-Key": f"perf-{time.time()}"}
-    body = {"from_acc": "A", "to_acc": "B", "amount": 1_000}
-    reset_bank()
-
-    t0 = time.perf_counter()
-    requests.post(f"{BASE_URL}/transfer", json=body, headers=h)
-    elapsed_ms = (time.perf_counter() - t0) * 1000
-
-    if elapsed_ms > sla_ms:
-        return False, f"VIOLATION [latency_spike]: SLA breached. Response took {elapsed_ms:.1f}ms (threshold: {sla_ms}ms)."
-    return True, f"Passed: Latency within SLA ({elapsed_ms:.1f}ms)."
-
-
-# ---------- Pillar 3: Security Tests ----------
-def test_security_leak() -> Tuple[bool, str]:
-    """Pillar 3: Security - Error responses must not leak internal database infrastructure."""
-    h = {"Idempotency-Key": "sec-test"}
-    body = {"from_acc": "NONEXISTENT", "to_acc": "B", "amount": 1_000}
-    reset_bank()
-    res = requests.post(f"{BASE_URL}/transfer", json=body, headers=h)
-
-    indicators = ["postgres", "cluster", "internal record", "stack trace", "za-central"]
-    if any(token in res.text.lower() for token in indicators):
-        return False, f"VIOLATION [pii_leak]: Response disclosed internal system infrastructure: {res.text.strip()}"
-    return True, "Passed: Clean error response without infrastructure leaks."
-
-
-# ---------- Suite ----------
-def run_suite() -> list:
-    tests = [
-        ("tc-func-01", "Functional - Idempotency", test_idempotency_retry),
-        ("tc-func-02", "Functional - Conservation", test_balance_conservation),
-        ("tc-func-03", "Functional - Unknown Account", test_unknown_account_error),
-        ("tc-perf-01", "Performance - Latency SLA", test_performance_sla),
-        ("tc-sec-01",  "Security - Error Leakage", test_security_leak),
+    sigs = []
+    details = [
+        f"{ok}/{BURST_SIZE} succeeded, p95 latency {p95:.0f} ms (budget {LATENCY_BUDGET_MS} ms)",
+        f"sender lost {sender_delta}, recipient gained {recipient_delta}, ledger rows {rows}",
     ]
+    if p95 > LATENCY_BUDGET_MS:
+        sigs.append("slow_response")
+        details.append(f"VIOLATION: p95 latency {p95:.0f} ms is over the {LATENCY_BUDGET_MS} ms budget under load")
+    if ok != BURST_SIZE:
+        sigs.append("unclassified")
+        details.append(f"VIOLATION: {BURST_SIZE - ok} requests failed under load")
+    if sender_delta != recipient_delta:
+        sigs.append("phantom_success")
+        details.append("VIOLATION: sender and recipient amounts differ under load (money created or lost)")
+    elif sender_delta != ok * amount or rows != ok:
+        sigs.append("unclassified")
+        details.append("VIOLATION: balances or ledger do not match the number of successes under load")
+    res.findings.extend(sigs)
+    res.details.extend(f"[perf-002] {d}" for d in details)
+    if verbose:
+        status = "PASS" if res.passed else "FAIL " + ",".join(sorted(set(res.findings)))
+        print(f"  {res.test_id:8} {status:28} {res.name}")
+    return res
 
-    results = []
-    for test_id, name, fn in tests:
-        passed, msg = fn()
-        results.append({"id": test_id, "name": name, "passed": passed, "message": msg})
-    return results
+
+# ---------- one test case ----------
+
+def run_test_case(tc: dict, verbose: bool = True) -> TestResult:
+    test_id, name = tc["id"], tc["name"]
+    payload = tc["payload"]
+    headers = tc.get("headers", {})
+    repeat = int(tc.get("repeat", 1))
+    expected_status = tc.get("expected_status")
+    wanted = set(tc.get("invariants_to_check", []))
+
+    res = TestResult(test_id, name)
+    reset_bank()  # isolation: every case starts from the same state
+
+    tracked = ["A", "B"]
+    before = {a: get_balance(a) for a in tracked}
+    ledger_before = get_ledger()
+
+    responses, snapshots, latencies = [], [], []
+    for _ in range(repeat):
+        resp, ms = timed_transfer(payload, headers)
+        responses.append(resp)
+        latencies.append(ms)
+        snapshots.append(get_ledger())
+
+    after = {a: get_balance(a) for a in tracked}
+    rows_added = len(get_ledger()) - len(ledger_before)
+
+    # Expectation mismatch = the planner's guess differs from the bank.
+    # It is NOT a verdict: a human decides whether the bank or the guess is wrong.
+    for i, r in enumerate(responses):
+        if expected_status is not None and r.status_code != expected_status:
+            res.observations.append(
+                f"request {i + 1}: expected {expected_status}, got {r.status_code}"
+            )
+
+    both_known = payload.get("from_acc") in before and payload.get("to_acc") in before
+    bal_before = before if both_known else None
+
+    checks = []
+    # idempotency only makes sense for retries; ledger and PII run on EVERY case
+    # because they are global rules, not optional ones.
+    if repeat > 1 or "idem-001" in wanted:
+        checks.append(("idem-001", check_idempotency(responses, snapshots)))
+    checks.append(("ledger-001", check_ledger(payload, responses, repeat, bal_before, after, rows_added)))
+    checks.append(("pii-001", check_pii(payload, headers, responses)))
+    checks.append(("perf-001", check_latency(latencies)))
+
+    for inv_id, (sigs, details) in checks:
+        res.findings.extend(sigs)
+        res.details.extend(f"[{inv_id}] {d}" for d in details)
+
+    if verbose:
+        status = "PASS" if res.passed else "FAIL " + ",".join(sorted(set(res.findings)))
+        print(f"  {test_id:8} {status:28} {name}")
+        for o in res.observations:
+            print(f"           note: {o}")
+    return res
+
+
+# ---------- suite ----------
+
+def run_suite(test_cases: list, verbose: bool = True) -> dict:
+    results = [run_test_case(tc, verbose) for tc in test_cases]
+    results.append(run_load_check(verbose))  # built-in performance check, not planner-written
+    return {
+        "active_bugs": get_active_bugs(),
+        "results": [r.to_dict() for r in results],
+    }
 
 
 def main():
-    # Verify bank is running
+    plan_path = Path("agent/test_plan.json")
+    if not plan_path.exists():
+        print("No agent/test_plan.json found. Run agent/planner.py first.")
+        return
+    cases = json.loads(plan_path.read_text())["test_cases"]
     try:
         requests.get(f"{BASE_URL}/ledger", timeout=2)
     except requests.exceptions.ConnectionError:
-        print(f"Bank not running at {BASE_URL}. Start it with:")
+        print(f"Bank not running at {BASE_URL}. Start it in another terminal:")
         print("  uvicorn bank.app:app --port 8000")
         return
 
-    print(f"Running {len(run_suite())} test cases...\n")
-    for r in run_suite():
-        status = "✅ PASS" if r["passed"] else "❌ FAIL"
-        print(f"[{status}] {r['name']} ({r['id']}): {r['message']}")
+    print(f"Running {len(cases)} test cases + 1 load check...\n")
+    out = run_suite(cases)
+    failed = [r for r in out["results"] if not r["passed"]]
+    found = sorted({s for r in failed for s in r["findings"]})
+    total = len(out["results"])
+    print(f"\n{total - len(failed)}/{total} passed. Findings: {found or 'none'}")
+    Path("results").mkdir(exist_ok=True)
+    Path("results/last_run.json").write_text(json.dumps(out, indent=2))
+    print("Saved results/last_run.json")
 
 
 if __name__ == "__main__":

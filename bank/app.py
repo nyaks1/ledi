@@ -62,6 +62,10 @@ def balance(acc: str):
 def get_ledger():
     return ledger
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
 # Test-only: reset to initial state
 @app.post("/_test/reset")
 def reset():
